@@ -41,11 +41,21 @@ export default function App() {
   const [p3ExitStep, setP3ExitStep] = useState(0);
   const [showPage4, setShowPage4] = useState(false);
   const [p4Step, setP4Step] = useState(0);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const carouselRef = useRef(null);
+  const carouselDragRef = useRef({ isDragging: false, startX: 0, scrollX: 0 });
   const rootRef = useRef(null);
   const scrollRef = useRef(null);
   const pasilyoRef = useRef(null);
   const pasilyoVideoRef = useRef(null);
   const scrollLockRef = useRef(0);
+
+  const carouselImages = [
+    '/moments/1.jpg', '/moments/2.jpg', '/moments/3.jpg', '/moments/4.jpg',
+    '/moments/5.jpg', '/moments/6.png', '/moments/7.jpg', '/moments/8.jpg',
+    '/moments/9.jpg', '/moments/10.jpg', '/moments/11.jpg', '/moments/12.jpg',
+    '/moments/13.jpg', '/moments/14.jpg', '/moments/15.jpg', '/moments/16.jpg', '/moments/17.jpg',
+  ];
 
   const songData = [
     { title: 'Pasilyo', artist: 'SunKissed Lola', image: '/moments/14.jpg', audio: '/music/pasilyo.mp3', gif: '/moments/cat3.gif', corner: 'top-right' },
@@ -194,9 +204,21 @@ export default function App() {
 
   useEffect(() => {
     if (!showPage4) { setP4Step(0); return; }
-    const t = setTimeout(() => setP4Step(1), 3000);
-    return () => clearTimeout(t);
+    const t1 = setTimeout(() => setP4Step(1), 3000);
+    return () => clearTimeout(t1);
   }, [showPage4]);
+
+  useEffect(() => {
+    if (p4Step !== 1) return;
+    const t2 = setTimeout(() => setP4Step(2), 2000);
+    return () => clearTimeout(t2);
+  }, [p4Step]);
+
+  useEffect(() => {
+    if (p4Step !== 2) return;
+    const t3 = setTimeout(() => setP4Step(3), 800);
+    return () => clearTimeout(t3);
+  }, [p4Step]);
 
   useEffect(() => {
     setVideoLoaded(false);
@@ -1483,25 +1505,85 @@ export default function App() {
                 inset: 0,
                 zIndex: 50,
                 background: '#000',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: "'Cormorant Garamond', serif",
+                overflow: 'hidden',
               }}
             >
               <div
                 style={{
-                  opacity: p4Step >= 1 ? 1 : 0,
-                  transition: 'opacity 2s ease',
+                  position: 'absolute',
+                  top: '45%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  opacity: p4Step >= 1 && p4Step < 2 ? 1 : 0,
+                  transition: 'opacity 1.5s ease',
                   fontFamily: "'Libre Baskerville', serif",
                   fontStyle: 'italic',
                   fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
                   color: 'rgba(255,255,255,0.8)',
                   textAlign: 'center',
-                  padding: '2rem',
+                  pointerEvents: 'none',
                 }}
               >
                 And if you're wondering...
+              </div>
+              <div
+                ref={carouselRef}
+                onWheel={(e) => { if (p4Step < 3) return; e.preventDefault(); if (e.deltaY > 0) setCarouselIndex(i => Math.min(i + 1, carouselImages.length - 1)); else setCarouselIndex(i => Math.max(i - 1, 0)); }}
+                onMouseDown={(e) => { const r = carouselDragRef.current; r.isDragging = true; r.startX = e.clientX; r.scrollX = carouselIndex; }}
+                onMouseMove={(e) => { const r = carouselDragRef.current; if (!r.isDragging) return; const dx = e.clientX - r.startX; if (Math.abs(dx) > 50) { const dir = dx > 0 ? -1 : 1; setCarouselIndex(i => Math.max(0, Math.min(carouselImages.length - 1, r.scrollX + dir))); r.isDragging = false; } }}
+                onMouseUp={() => { carouselDragRef.current.isDragging = false; }}
+                onMouseLeave={() => { carouselDragRef.current.isDragging = false; }}
+                style={{
+                  position: 'absolute',
+                  bottom: p4Step >= 2 ? '25%' : '-40%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0',
+                  width: '100%',
+                  height: '320px',
+                  cursor: p4Step >= 3 ? 'grab' : 'default',
+                  transition: 'bottom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  userSelect: 'none',
+                }}
+              >
+                {carouselImages.map((src, i) => {
+                  const offset = i - carouselIndex;
+                  const dist = Math.abs(offset);
+                  const maxVisible = 3;
+                  if (dist > maxVisible) return null;
+                  const arcY = -Math.pow(offset, 2) * 18;
+                  const arcScale = 1 - dist * 0.15;
+                  const rotate = offset * -8;
+                  const zIndex = 100 - dist;
+                  return (
+                    <img
+                      key={i}
+                      src={src}
+                      alt=""
+                      draggable={false}
+                      onClick={() => setCarouselIndex(i)}
+                      style={{
+                        position: 'absolute',
+                        left: `calc(50% + ${offset * 110}px)`,
+                        transform: `translateX(-50%) translateY(${arcY}px) rotate(${rotate}deg) scale(${arcScale})`,
+                        width: 'min(200px, 28vw)',
+                        height: 'min(260px, 36vh)',
+                        objectFit: 'cover',
+                        borderRadius: '10px',
+                        zIndex,
+                        opacity: offset === 0 ? 1 : 0.6,
+                        boxShadow: offset === 0 ? '0 8px 30px rgba(255,255,255,0.15)' : '0 4px 15px rgba(0,0,0,0.4)',
+                        transition: 'left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, boxShadow 0.4s ease',
+                        cursor: 'pointer',
+                        pointerEvents: p4Step >= 2 ? 'auto' : 'none',
+                        border: offset === 0 ? '2px solid rgba(255,255,255,0.3)' : 'none',
+                      }}
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
