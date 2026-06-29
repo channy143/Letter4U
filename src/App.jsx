@@ -1,0 +1,1514 @@
+import React, { useState, useEffect, useRef } from 'react';
+import PetalCanvas from './components/PetalCanvas';
+import Navbar from './components/Navbar';
+import Hero from './components/Hero';
+import LetterModal from './components/LetterModal';
+import QuotesSection from './components/QuotesSection';
+import MomentsSection from './components/MomentsSection';
+import Footer from './components/Footer';
+import GameIntro from './components/GameIntro';
+import MusicPlayer from './components/MusicPlayer';
+
+export default function App() {
+  const [gameDone, setGameDone] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [amourRevealed, setAmourRevealed] = useState(false);
+  const [showLockPage, setShowLockPage] = useState(false);
+  const [pin, setPin] = useState([]);
+  const [pinError, setPinError] = useState(false);
+  const [pinUnlocked, setPinUnlocked] = useState(false);
+  const [tulipCount, setTulipCount] = useState(0);
+  const [wrongCat, setWrongCat] = useState(false);
+  const [confettiParticles, setConfettiParticles] = useState([]);
+  const [showBgPage, setShowBgPage] = useState(false);
+  const [exitAnimating, setExitAnimating] = useState(false);
+  const [bgRevealStep, setBgRevealStep] = useState(0);
+  const [bgExitStep, setBgExitStep] = useState(0);
+  const [bgExitTarget, setBgExitTarget] = useState('close');
+  const [bgPageIndex, setBgPageIndex] = useState(0);
+  const [p2Step, setP2Step] = useState(0);
+  const [p2ExitStep, setP2ExitStep] = useState(0);
+  const [p2ExitTarget, setP2ExitTarget] = useState('close');
+  const [p3Step, setP3Step] = useState(0);
+  const [songPlaying, setSongPlaying] = useState(false);
+  const [currentSongIndex, setCurrentSongIndex] = useState(0);
+  const [bgMusicPauseTrigger, setBgMusicPauseTrigger] = useState(0);
+  const [bgMusicResumeTrigger, setBgMusicResumeTrigger] = useState(0);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const [pageFade, setPageFade] = useState(1);
+  const [scrollY, setScrollY] = useState(0);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [p3ExitStep, setP3ExitStep] = useState(0);
+  const [showPage4, setShowPage4] = useState(false);
+  const [p4Step, setP4Step] = useState(0);
+  const rootRef = useRef(null);
+  const scrollRef = useRef(null);
+  const pasilyoRef = useRef(null);
+  const pasilyoVideoRef = useRef(null);
+  const scrollLockRef = useRef(0);
+
+  const songData = [
+    { title: 'Pasilyo', artist: 'SunKissed Lola', image: '/moments/14.jpg', audio: '/music/pasilyo.mp3', gif: '/moments/cat3.gif', corner: 'top-right' },
+    { title: 'Tibok', artist: 'Earl Agustin', image: '/moments/16.jpg', audio: '/music/tibok.mp3', gif: '/moments/cat7.gif', corner: 'bottom-left' },
+    { title: 'Glue', artist: 'Bini', image: '/moments/17.jpg', audio: '/music/glue.mp3', gif: '/moments/cat9.gif', corner: 'top-left' },
+  ];
+
+  function handleGameComplete() {
+    setGameDone(true);
+    // Slight delay then reveal amour-root with fade
+    requestAnimationFrame(() => {
+      setAmourRevealed(true);
+    });
+  }
+
+  useEffect(() => {
+    if (pinUnlocked) {
+      const colors = ['#9b3a4a', '#b8923a', '#d4847a', '#c8ab37', '#e8c4a0', '#f5ede0'];
+      const particles = [];
+      for (let i = 0; i < 40; i++) {
+        const isLeft = i < 20;
+        particles.push({
+          id: i,
+          isLeft,
+          dx: isLeft ? 80 + Math.random() * 350 : -(80 + Math.random() * 350),
+          dy: (Math.random() - 0.5) * 600,
+          dr: (Math.random() - 0.5) * 720,
+          size: 6 + Math.random() * 10,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          delay: Math.random() * 0.5,
+          duration: 1.2 + Math.random() * 1,
+          top: 10 + Math.random() * 80,
+          round: Math.random() > 0.5,
+        });
+      }
+      setConfettiParticles(particles);
+    }
+  }, [pinUnlocked]);
+
+  useEffect(() => {
+    if (!exitAnimating) return;
+    const t = setTimeout(() => {
+      setShowBgPage(true);
+      setShowLockPage(false);
+      setExitAnimating(false);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [exitAnimating]);
+
+  useEffect(() => {
+    if (!showBgPage) return;
+    const t = setTimeout(() => {
+      setBgRevealStep(1);
+      if (bgPageIndex === 1) setP2Step(1);
+    }, 100);
+    return () => clearTimeout(t);
+  }, [showBgPage, bgPageIndex]);
+
+  useEffect(() => {
+    if (bgRevealStep === 0 || bgRevealStep >= 4) return;
+    const delays = [0, 1100, 1000, 0];
+    const t = setTimeout(() => setBgRevealStep(s => s + 1), delays[bgRevealStep]);
+    return () => clearTimeout(t);
+  }, [bgRevealStep]);
+
+  useEffect(() => {
+    if (bgExitStep === 0 || bgExitStep >= 3) return;
+    const delays = [0, 0.35, 1.0];
+    const t = setTimeout(() => setBgExitStep(s => s + 1), delays[bgExitStep] * 1000);
+    return () => clearTimeout(t);
+  }, [bgExitStep]);
+
+  useEffect(() => {
+    if (bgExitStep < 3) return;
+    if (bgExitTarget === 'next') {
+      setBgPageIndex(1);
+    } else {
+      setShowBgPage(false);
+      setBgPageIndex(0);
+      setPageFade(1);
+    }
+    setBgExitStep(0);
+    setBgRevealStep(0);
+    setP2Step(0);
+    setP2ExitStep(0);
+    setBgExitTarget('close');
+  }, [bgExitStep]);
+
+  useEffect(() => {
+    if (p2Step === 0 || p2Step >= 5) return;
+    const delays = [0, 800, 400, 400, 400];
+    const t = setTimeout(() => setP2Step(s => s + 1), delays[p2Step]);
+    return () => clearTimeout(t);
+  }, [p2Step]);
+
+  useEffect(() => {
+    if (p2ExitStep === 0 || p2ExitStep >= 4) return;
+    const delays = [0, 1.2, 0.3, 0.3];
+    const t = setTimeout(() => setP2ExitStep(s => s + 1), delays[p2ExitStep] * 1000);
+    return () => clearTimeout(t);
+  }, [p2ExitStep]);
+
+  useEffect(() => {
+    if (p2ExitStep < 4) return;
+    if (p2ExitTarget === 'next') {
+      setPageFade(0);
+      setTimeout(() => {
+        setBgPageIndex(2);
+        setP3Step(0);
+        setP2ExitStep(0);
+        setP2Step(0);
+        setBgRevealStep(0);
+        setBgExitStep(0);
+        setP2ExitTarget('close');
+        requestAnimationFrame(() => setPageFade(1));
+      }, 500);
+    } else {
+      setShowBgPage(false);
+      setBgPageIndex(0);
+      setPageFade(1);
+      setP2ExitStep(0);
+      setP2Step(0);
+      setBgRevealStep(0);
+      setBgExitStep(0);
+      setP2ExitTarget('close');
+    }
+  }, [p2ExitStep, p2ExitTarget]);
+
+  useEffect(() => {
+    if (bgPageIndex !== 2) { setP3Step(0); return; }
+    const t = setTimeout(() => setP3Step(1), 1300);
+    return () => clearTimeout(t);
+  }, [bgPageIndex]);
+
+  useEffect(() => {
+    if (p3ExitStep !== 1) return;
+    const t = setTimeout(() => setP3ExitStep(2), 700);
+    return () => clearTimeout(t);
+  }, [p3ExitStep]);
+
+  useEffect(() => {
+    if (p3ExitStep !== 2) return;
+    setShowPage4(true);
+    setP3ExitStep(0);
+  }, [p3ExitStep]);
+
+  useEffect(() => {
+    if (!showPage4) { setP4Step(0); return; }
+    const t = setTimeout(() => setP4Step(1), 3000);
+    return () => clearTimeout(t);
+  }, [showPage4]);
+
+  useEffect(() => {
+    setVideoLoaded(false);
+  }, [currentSongIndex]);
+
+  useEffect(() => {
+    const v = pasilyoVideoRef.current;
+    if (!v) return;
+    if (songPlaying && videoLoaded) {
+      v.play().catch(() => {});
+    } else if (!songPlaying) {
+      v.pause();
+    }
+  }, [currentSongIndex, songPlaying, videoLoaded]);
+
+  useEffect(() => {
+    if (!amourRevealed) return;
+    const t = setTimeout(() => {
+      if (rootRef.current) {
+        rootRef.current.style.visibility = 'visible';
+        rootRef.current.style.pointerEvents = 'auto';
+        rootRef.current.style.opacity = '1';
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [amourRevealed]);
+
+  function handlePinDigit(d) {
+    if (pinUnlocked || tulipCount > 0) return;
+    if (pin.length >= 4) return;
+    const next = [...pin, d];
+    setPin(next);
+    if (next.length === 4) {
+      if (next.join('') === '0409') {
+        for (let i = 1; i <= 4; i++) {
+          setTimeout(() => setTulipCount(i), i * 400);
+        }
+        setTimeout(() => setPinUnlocked(true), 4 * 400 + 600);
+      } else {
+        setWrongCat(true);
+        setPinError(true);
+        setTimeout(() => {
+          setWrongCat(false);
+          setPinError(false);
+          setPin([]);
+        }, 5000);
+      }
+    }
+  }
+
+  function handleReadLetter() {
+    setShowModal(true);
+  }
+
+  useEffect(() => {
+    if (!shouldAutoPlay) return;
+    const a = pasilyoRef.current;
+    if (a) {
+      a.play();
+      setSongPlaying(true);
+      setBgMusicPauseTrigger(t => t + 1);
+      scrollLockRef.current = scrollRef.current?.scrollTop || 0;
+    }
+    setShouldAutoPlay(false);
+  }, [shouldAutoPlay, currentSongIndex]);
+
+  function handleCloseModal() {
+    setShowModal(false);
+  }
+
+  function togglePasilyo() {
+    const a = pasilyoRef.current;
+    if (!a) return;
+    if (a.paused) {
+      a.play(); setSongPlaying(true);
+      setBgMusicPauseTrigger(t => t + 1);
+      scrollLockRef.current = scrollRef.current?.scrollTop || 0;
+    } else {
+      a.pause(); a.currentTime = 0; setSongPlaying(false);
+      const v = pasilyoVideoRef.current;
+      if (v) { v.pause(); v.currentTime = 0; }
+      setBgMusicResumeTrigger(t => t + 1);
+      scrollLockRef.current = 0;
+    }
+  }
+
+  function prevSong() {
+    const a = pasilyoRef.current;
+    if (a) { a.pause(); a.currentTime = 0; }
+    const v = pasilyoVideoRef.current;
+    if (v) { v.pause(); v.currentTime = 0; }
+    setSongPlaying(false);
+    scrollLockRef.current = scrollRef.current?.scrollTop || 0;
+    setCurrentSongIndex(i => (i - 1 + songData.length) % songData.length);
+    setShouldAutoPlay(true);
+  }
+  function nextSong() {
+    const a = pasilyoRef.current;
+    if (a) { a.pause(); a.currentTime = 0; }
+    const v = pasilyoVideoRef.current;
+    if (v) { v.pause(); v.currentTime = 0; }
+    setSongPlaying(false);
+    scrollLockRef.current = scrollRef.current?.scrollTop || 0;
+    setCurrentSongIndex(i => (i + 1) % songData.length);
+    setShouldAutoPlay(true);
+  }
+
+  const vh = window.innerHeight;
+  const sectionTopPx = 1.49 * vh;
+
+  return (
+    <>
+      {!gameDone && <GameIntro onComplete={handleGameComplete} />}
+
+      <div
+        ref={rootRef}
+        id="amour-root"
+        style={{
+          visibility: 'hidden',
+          opacity: 0,
+          pointerEvents: 'none',
+          transition: 'opacity 0.8s ease',
+          display: showLockPage || showBgPage ? 'none' : undefined,
+        }}
+      >
+          <PetalCanvas />
+          <Navbar onLetterClick={handleReadLetter} />
+          <Hero onReadLetter={handleReadLetter} />
+          {showModal && <LetterModal onClose={handleCloseModal} />}
+          <QuotesSection />
+          <MomentsSection onLockClick={() => setShowLockPage(true)} />
+          <Footer />
+        </div>
+
+      {showLockPage && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: pinUnlocked ? '#fff' : 'linear-gradient(160deg, #fdf6ed 0%, #f5ede0 50%, #f0e6d6 100%)',
+            display: 'flex',
+            animation: 'fadeIn 0.8s ease',
+            fontFamily: "'Cormorant Garamond', serif",
+          }}
+        >
+          <button
+            onClick={() => { setShowLockPage(false); setShowBgPage(false); setExitAnimating(false); setPin([]); setPinError(false); setPinUnlocked(false); setTulipCount(0); setConfettiParticles([]); }}
+            style={{
+              position: 'absolute',
+              top: '1.5rem',
+              right: '2rem',
+              zIndex: 10,
+              fontFamily: "'Cinzel', serif",
+              fontSize: '1.5rem',
+              color: 'var(--ink)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              opacity: 0.3,
+              transition: 'opacity 0.3s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.7)}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = 0.3)}
+          >
+            &#10005;
+          </button>
+
+          <img
+            src="/moments/tulip.png"
+            alt=""
+            style={{
+              position: 'absolute',
+              left: '-240px',
+              top: 'calc(50% + 200px)',
+              transform: 'translateY(-50%) rotate(15deg)',
+              width: 'auto',
+              height: '540px',
+              pointerEvents: exitAnimating ? 'none' : 'none',
+              zIndex: 20,
+              animation: exitAnimating ? 'slideOutLeft 0.8s ease-in forwards' : 'slideInLeft 1.5s cubic-bezier(0.16, 1, 0.3, 1) both',
+            }}
+          />
+          <img
+            src="/moments/tulip.png"
+            alt=""
+            style={{
+              position: 'absolute',
+              right: '-240px',
+              top: 'calc(50% + 200px)',
+              transform: 'translateY(-50%) rotate(-15deg) scaleX(-1)',
+              width: 'auto',
+              height: '540px',
+              pointerEvents: 'none',
+              zIndex: 20,
+              animation: exitAnimating ? 'slideOutRight 0.8s ease-in forwards' : 'slideInRight 1.5s cubic-bezier(0.16, 1, 0.3, 1) both',
+            }}
+          />
+
+          {pinUnlocked && confettiParticles.map(p => {
+            return (
+              <div
+                key={p.id}
+                style={{
+                  position: 'absolute',
+                  left: p.isLeft ? 0 : 'auto',
+                  right: p.isLeft ? 'auto' : 0,
+                  top: p.top + '%',
+                  width: p.size + 'px',
+                  height: p.size + 'px',
+                  background: p.color,
+                  borderRadius: p.round ? '50%' : '2px',
+                  zIndex: 15,
+              filter: 'brightness(1.35)',
+              pointerEvents: 'none',
+                  animation: 'confettiBurst ' + p.duration + 's ' + p.delay + 's ease-out both',
+                  '--dx': p.dx + 'px',
+                  '--dy': p.dy + 'px',
+                  '--dr': p.dr + 'deg',
+                }}
+              />
+            );
+          })}
+
+          {!pinUnlocked ? (
+            <div style={{ display: 'flex', width: '100%' }}>
+              <div
+                style={{
+                  flex: '0 0 auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '1rem 2rem 1rem calc(2rem + 250px)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '1.5rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '0.6rem',
+                      letterSpacing: '0.4em',
+                      textTransform: 'uppercase',
+                      color: 'var(--gold)',
+                    }}
+                  >
+                    &#10038; &nbsp; a locked page &nbsp; &#10038;
+                  </span>
+                  <h1
+                    style={{
+                      fontFamily: "'Libre Baskerville', serif",
+                      fontStyle: 'italic',
+                      fontSize: 'clamp(1.6rem, 4vw, 2.4rem)',
+                      fontWeight: 400,
+                      color: 'var(--ink)',
+                      textAlign: 'center',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Hidden Words<br />From My Heart
+                  </h1>
+                  <div
+                    style={{
+                      width: '3rem',
+                      height: '1px',
+                      background: 'var(--blush)',
+                      opacity: 0.5,
+                      marginTop: '0.3rem',
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '2.5rem' }}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: '48px',
+                        height: '56px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: "'Cinzel', serif",
+                        fontSize: '1.4rem',
+                        color: 'var(--ink)',
+                        background: pin[i] !== undefined ? 'rgba(184,146,58,0.08)' : 'transparent',
+                        transition: 'all 0.2s ease',
+                        border: '2px solid ' + (pinError ? 'var(--rose)' : pin[i] !== undefined ? 'var(--rose)' : 'rgba(184,146,58,0.35)'),
+                      }}
+                    >
+                      {pin[i] !== undefined ? (
+                        i < tulipCount ? (
+                          <svg width="22" height="32" viewBox="0 0 22 32" fill="none" style={{ display: 'block' }}>
+                            <path d="M11 21Q6 21 5 17Q4 12 5 9Q6 5 7 3Q8 4 9 4Q10 2 11 1Q12 2 13 4Q14 4 15 3Q16 5 17 9Q18 12 17 17Q16 21 11 21Z" fill="#9b3a4a" fillOpacity="0.88" />
+                            <path d="M11 21V28" stroke="#9b3a4a" strokeWidth="2.5" strokeLinecap="round" />
+                            <path d="M11 23Q6 23 3 27" stroke="#9b3a4a" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.6" />
+                            <path d="M11 25Q16 25 19 29" stroke="#9b3a4a" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.6" />
+                          </svg>
+                        ) : (
+                          '✧'
+                        )
+                      ) : ''}
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 60px)',
+                    gap: '10px',
+                  }}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => handlePinDigit(n)}
+                      style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(184,146,58,0.25)',
+                        background: 'rgba(253,246,237,0.6)',
+                        fontFamily: "'Cinzel', serif",
+                        fontSize: '1.2rem',
+                        color: 'var(--ink)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(26,10,8,0.06)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--rose)';
+                        e.currentTarget.style.color = '#fff';
+                        e.currentTarget.style.borderColor = 'var(--rose)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(155,58,74,0.2)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(253,246,237,0.6)';
+                        e.currentTarget.style.color = 'var(--ink)';
+                        e.currentTarget.style.borderColor = 'rgba(184,146,58,0.25)';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(26,10,8,0.06)';
+                      }}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <div />
+                  <button
+                    onClick={() => handlePinDigit(0)}
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(184,146,58,0.25)',
+                      background: 'rgba(253,246,237,0.6)',
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '1.2rem',
+                      color: 'var(--ink)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(26,10,8,0.06)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--rose)';
+                      e.currentTarget.style.color = '#fff';
+                      e.currentTarget.style.borderColor = 'var(--rose)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(155,58,74,0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(253,246,237,0.6)';
+                      e.currentTarget.style.color = 'var(--ink)';
+                      e.currentTarget.style.borderColor = 'rgba(184,146,58,0.25)';
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(26,10,8,0.06)';
+                    }}
+                  >
+                    0
+                  </button>
+                  <button
+                    onClick={() => { setPin([]); setPinError(false); }}
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      background: 'transparent',
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontSize: '0.8rem',
+                      fontStyle: 'italic',
+                      color: '#7a6a64',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--rose)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#7a6a64'; }}
+                  >
+                    clear
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '1rem',
+                  background: 'rgba(253,246,237,0.3)',
+                  position: 'relative',
+                }}
+              >
+                <img
+                  src={wrongCat ? '/moments/cat2.gif' : '/moments/cat4.gif'}
+                  alt=""
+                  style={{
+                    width: '42%',
+                    height: 'auto',
+                    maxHeight: '85vh',
+                    objectFit: 'contain',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 24px rgba(26,10,8,0.08)',
+                    transition: 'box-shadow 0.6s ease, opacity 0.4s ease',
+                  }}
+                />
+
+                {pinError && (
+                  <div
+                    style={{
+                      marginTop: '1rem',
+                      background: 'var(--rose)',
+                      color: '#fff',
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: 'italic',
+                      fontSize: '0.95rem',
+                      padding: '10px 18px',
+                      borderRadius: '14px',
+                      maxWidth: '260px',
+                      textAlign: 'center',
+                      lineHeight: 1.5,
+                      position: 'relative',
+                      animation: 'fadeIn 0.3s ease',
+                      boxShadow: '0 4px 16px rgba(155,58,74,0.2)',
+                    }}
+                  >
+                    That's not it, love.
+                    <br />
+                    <span style={{ opacity: 0.8, fontSize: '0.85rem' }}>
+                      tip: the first day we met
+                    </span>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: '30px',
+                        width: 0,
+                        height: 0,
+                        borderLeft: '6px solid transparent',
+                        borderRight: '6px solid transparent',
+                        borderBottom: '8px solid var(--rose)',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.8rem',
+                padding: '2rem',
+                textAlign: 'center',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '0.6rem',
+                  letterSpacing: '0.4em',
+                  textTransform: 'uppercase',
+                  color: 'var(--gold)',
+                  animation: exitAnimating ? 'fadeOut 0.4s ease 0s both' : 'textFade 0.8s ease 0.2s both',
+                }}
+              >
+                &#10038; &nbsp; unlocked &nbsp; &#10038;
+              </span>
+              <h1
+                style={{
+                  fontFamily: "'Libre Baskerville', serif",
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(1.8rem, 4vw, 2.6rem)',
+                  fontWeight: 400,
+                  color: 'var(--rose)',
+                  lineHeight: 1.3,
+                  animation: exitAnimating ? 'fadeOut 0.4s ease 0.15s both' : 'textFade 0.8s ease 0.4s both',
+                }}
+              >
+                You remembered.
+              </h1>
+              <img
+                src="/moments/cat5.gif"
+                alt=""
+                style={{
+                  width: '42%',
+                  maxWidth: '420px',
+                  height: 'auto',
+                  maxHeight: '55vh',
+                  objectFit: 'contain',
+                  borderRadius: '16px',
+                  boxShadow: '0 8px 40px rgba(155,58,74,0.15)',
+                  animation: exitAnimating ? 'fadeOut 0.4s ease 0.3s both' : 'catReveal 2s ease forwards',
+                }}
+              />
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontSize: '1.1rem',
+                  color: '#7a6a64',
+                  maxWidth: '360px',
+                  lineHeight: 1.7,
+                  animation: exitAnimating ? 'fadeOut 0.4s ease 0.45s both' : 'textFade 0.8s ease 1s both',
+                }}
+              >
+                April 9. The first day our worlds touched.
+                <br />
+                I've been carrying that day ever since.
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  marginTop: '0.5rem',
+                  animation: exitAnimating ? 'fadeOut 0.4s ease 0.6s both' : undefined,
+                }}
+              >
+                <div style={{ width: '10px', height: '1px', background: 'var(--rose)', opacity: 0.4 }} />
+                <span
+                  onClick={() => setExitAnimating(true)}
+                  style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontStyle: 'italic',
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                  color: songPlaying && videoLoaded ? 'rgba(255,255,255,0.85)' : 'var(--rose)',
+                    cursor: exitAnimating ? 'default' : 'pointer',
+                    letterSpacing: '0.05em',
+                    animation: exitAnimating ? 'fadeOut 0.4s ease 0.6s both' : 'flicker 2.5s ease-in-out infinite',
+                  }}
+                >
+                  click to continue
+                </span>
+                <div style={{ width: '10px', height: '1px', background: 'var(--rose)', opacity: 0.4 }} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showBgPage && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 2000,
+            background: 'url(/moments/' + (bgPageIndex === 2 ? 'bg3.png' : 'bg1.jpg') + ') center/cover no-repeat',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            opacity: pageFade,
+            transition: 'opacity 0.5s ease',
+          }}
+        >
+          <img
+            src="/moments/letter.png"
+            alt=""
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: p2ExitStep >= 1 ? 'translateY(200vh) translate(-50%, calc(-50% + 400px))' : bgPageIndex >= 1 ? 'translate(-50%, calc(-50% + 400px))' : bgRevealStep >= 1 ? 'translate(-50%, calc(-50% + 400px))' : 'translateY(200vh) translate(-50%, calc(-50% + 400px))',
+              maxWidth: 'calc(76vw + 800px)',
+              maxHeight: 'calc(76vh + 800px)',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              pointerEvents: 'none',
+              opacity: bgPageIndex === 2 ? 0 : 1,
+              transition: p2ExitStep >= 1 ? 'transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)' : bgPageIndex >= 1 ? 'none' : 'transform 1.5s cubic-bezier(0.22, 1, 0.36, 1)',
+            }}
+          />
+          {bgPageIndex === 0 && <><div
+            style={{
+              position: 'absolute',
+              left: '47%',
+              top: '40%',
+              transform: bgExitStep >= 2 ? 'translateX(80px) translate(-50%, -50%)' : bgRevealStep >= 2 ? 'translate(-50%, -50%)' : 'translateX(80px) translate(-50%, -50%)',
+              width: 'min(800px, 50vw)',
+              maxHeight: 'calc(76vh + 400px)',
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: '1.6rem',
+              lineHeight: 1.8,
+              color: '#3a2a24',
+              padding: '10% 8%',
+              textAlign: 'right',
+              overflowY: 'auto',
+              pointerEvents: 'none',
+              opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 2 ? 1 : 0,
+              transition: 'opacity 0.8s ease, transform 0.8s ease',
+            }}
+          >
+            You may not realize it, but you've brought so much happiness into my life. Some days become lighter just because I got to talk to you. Some moments become special simply because you were part of them.
+          </div>
+          <div
+            style={{
+              position: 'absolute',
+              left: '52%',
+              top: '74%',
+              transform: bgExitStep >= 2 ? 'translateX(-80px) translate(-50%, -50%)' : bgRevealStep >= 3 ? 'translate(-50%, -50%)' : 'translateX(-80px) translate(-50%, -50%)',
+              width: 'min(800px, 48vw)',
+              maxHeight: 'calc(40vh)',
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: '1.6rem',
+              lineHeight: 1.8,
+              color: '#3a2a24',
+              padding: '2% 8%',
+              textAlign: 'left',
+              pointerEvents: 'none',
+              opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 3 ? 1 : 0,
+              transition: 'opacity 0.8s ease, transform 0.8s ease',
+            }}
+          >
+            Thank you for the laughs, the random conversations, the small updates about your day, and even the moments when you just stayed. Thank you for allowing me to know the real you.
+          </div>
+          {bgPageIndex === 0 && (
+            <span
+              onClick={() => { if (bgExitStep === 0) { setBgExitTarget('next'); setBgExitStep(1); } }}
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '90%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 15,
+                fontFamily: "'Cormorant Garamond', serif",
+                fontStyle: 'italic',
+                fontWeight: 600,
+                fontSize: '1rem',
+                color: 'var(--rose)',
+                cursor: bgExitStep === 0 ? 'pointer' : 'default',
+                letterSpacing: '0.05em',
+                opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 3 ? 1 : 0,
+                transition: 'opacity 0.8s ease',
+                pointerEvents: bgExitStep === 0 ? 'auto' : 'none',
+              }}
+            >
+              click to continue
+            </span>
+          )}
+          <div
+            style={{
+              position: 'absolute',
+              left: '25%',
+              top: '76%',
+              transform: bgExitStep >= 2 ? 'translateY(-200vh) translate(-50%, -50%) rotate(10deg)' : bgExitStep === 1 ? 'translate(-50%, calc(-50% + 25px)) rotate(10deg)' : bgRevealStep >= 1 ? 'translate(-50%, -50%) rotate(10deg)' : 'translateY(-200vh) translate(-50%, -50%) rotate(10deg)',
+              background: '#fff',
+              padding: '0 16px 140px',
+              borderRadius: '4px',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              transition: bgExitStep === 1 ? 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' : bgExitStep >= 2 ? 'transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)' : 'transform 1.5s cubic-bezier(0.25, 1.2, 0.5, 1)',
+            }}
+          >
+            <div
+              style={{
+                width: 'calc(20vw - 60px)',
+                height: 'calc(40vh - 40px)',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <img
+                src="/moments/11.jpg"
+                alt=""
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  width: '100%',
+                  height: '120%',
+                  objectFit: 'cover',
+                  objectPosition: 'center',
+                }}
+              />
+            </div>
+          </div>
+          <div
+            style={{
+              background: '#fff',
+              padding: '0 16px 140px',
+              borderRadius: '4px',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              marginLeft: '800px',
+              transform: bgExitStep >= 2 ? 'translateY(calc(-70px - 200vh)) rotate(-10deg)' : bgExitStep === 1 ? 'translateY(calc(-70px + 25px)) rotate(-10deg)' : bgRevealStep >= 1 ? 'translateY(-70px) rotate(-10deg)' : 'translateY(calc(-70px - 200vh)) rotate(-10deg)',
+              transition: bgExitStep === 1 ? 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' : bgExitStep >= 2 ? 'transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)' : 'transform 1.5s cubic-bezier(0.25, 1.2, 0.5, 1)',
+            }}
+          >
+            <img
+              src="/moments/13 - Copy.jpg"
+              alt=""
+              style={{
+                display: 'block',
+                maxWidth: 'calc(48vw - 60px)',
+                maxHeight: 'calc(48vh - 60px)',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+              }}
+            />
+          </div>
+          <img
+            src="/moments/cat6.gif"
+            alt=""
+            style={{
+              position: 'absolute',
+              left: 'calc(5% + 970px)',
+              bottom: '24%',
+              width: 'auto',
+              height: '250px',
+              borderRadius: '12px',
+              objectFit: 'contain',
+              clipPath: 'inset(20% 0 0 0)',
+              opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 2 ? 1 : 0,
+              transition: 'opacity 0.7s ease',
+            }}
+          />
+          <button
+            onClick={() => { if (bgExitStep === 0) { setBgExitTarget('close'); setBgExitStep(1); } }}
+            style={{
+              position: 'absolute',
+              top: '1.5rem',
+              right: '2rem',
+              zIndex: 10,
+              fontFamily: "'Cinzel', serif",
+              fontSize: '1.5rem',
+              color: '#fff',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              opacity: bgExitStep === 0 ? 0.5 : 0,
+              transition: 'opacity 0.3s ease',
+              textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              pointerEvents: bgExitStep === 0 ? 'auto' : 'none',
+            }}
+            onMouseEnter={(e) => { if (bgExitStep === 0) e.currentTarget.style.opacity = 1; }}
+            onMouseLeave={(e) => { if (bgExitStep === 0) e.currentTarget.style.opacity = 0.5; }}
+          >
+            &#10005;
+          </button>
+          </>}
+          {bgPageIndex === 1 && (
+            <>
+              <img
+                src="/moments/sunmoon.webp"
+                alt=""
+                style={{
+                  position: 'absolute',
+                  left: '10%',
+                  top: '27%',
+                  transform: p2ExitStep >= 1 ? 'translateX(-100px) translateY(-50%)' : p2Step >= 1 ? 'translateY(-50%)' : 'translateX(-100px) translateY(-50%)',
+                  width: 'auto',
+                  height: 'min(43vh, 400px)',
+                  objectFit: 'contain',
+                  opacity: p2ExitStep >= 1 ? 0 : p2Step >= 1 ? 1 : 0,
+                  pointerEvents: 'none',
+                  transition: 'opacity 1.2s ease, transform 1.2s ease',
+                }}
+              />
+              <img
+                src="/moments/cam.png"
+                alt=""
+                style={{
+                  position: 'absolute',
+                  right: '13%',
+                  top: '84%',
+                  transform: p2ExitStep >= 1 ? 'translateX(100px) translateY(-50%) scaleX(-1)' : p2Step >= 1 ? 'translateY(-50%) scaleX(-1)' : 'translateX(100px) translateY(-50%) scaleX(-1)',
+                  width: 'auto',
+                  height: '420px',
+                  objectFit: 'contain',
+                  opacity: p2ExitStep >= 1 ? 0 : p2Step >= 1 ? 1 : 0,
+                  pointerEvents: 'none',
+                  transition: 'opacity 1.2s ease, transform 1.2s ease',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: 'min(590px, 70vw)',
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(1.3rem, 2.5vw, 1.8rem)',
+                  lineHeight: 1.9,
+                  color: '#3a2a24',
+                  textAlign: 'right',
+                  padding: '2rem',
+                  opacity: p2ExitStep >= 1 ? 0 : p2Step >= 1 ? 1 : 0,
+                  transition: 'opacity 1.2s ease',
+                }}
+              >
+                You once told me that I gave you comfort and peace, but the truth is, you've done the same for me. You became someone I genuinely look forward to talking to every day.
+              </div>
+              {['her.png', 'her1.png', 'her3.png'].map((src, i) => {
+                const rotations = [-10, -10, 10];
+                const leftPositions = [25, 75, 87];
+                const topPositions = [75, 28, 47];
+                const entered = p2Step >= (1 + i);
+                const exiting = p2ExitStep >= 1;
+                let t;
+                if (exiting) {
+                  t = 'translate(-50%, calc(-50% - 200vh)) rotate(' + rotations[i] + 'deg)';
+                } else if (entered) {
+                  t = 'translate(-50%, -50%) rotate(' + rotations[i] + 'deg)';
+                } else {
+                  t = 'translateY(-200vh) translate(-50%, -50%) rotate(' + rotations[i] + 'deg)';
+                }
+                return (
+                  <div
+                    key={src}
+                    style={{
+                      position: 'absolute',
+                      left: leftPositions[i] + '%',
+                      top: topPositions[i] + '%',
+                      transform: t,
+                      background: '#fff',
+                      padding: '8px 8px 40px 8px', 
+                      borderRadius: '3px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      transition: exiting ? 'transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)' : 'transform 1.5s cubic-bezier(0.25, 1.2, 0.5, 1)',
+                      zIndex: 5,
+                    }}
+                  >
+                    <img
+                      src={'/moments/' + src}
+                      alt=""
+                      style={{
+                        display: 'block',
+                        width: 'auto',
+                        height: 'min(600vh, 250px)',
+                        objectFit: 'cover',
+                        borderRadius: '2px',
+                      }}
+                    />
+                  </div>
+                );
+              })}
+              <span
+                onClick={() => { if (p2ExitStep === 0) { setP2ExitTarget('next'); setP2ExitStep(1); } }}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '90%',
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 15,
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  color: 'var(--rose)',
+                  cursor: p2ExitStep === 0 ? 'pointer' : 'default',
+                  letterSpacing: '0.05em',
+                  opacity: p2ExitStep >= 1 ? 0 : p2Step >= 1 ? 1 : 0,
+                  transition: 'opacity 0.8s ease',
+                  pointerEvents: p2ExitStep === 0 ? 'auto' : 'none',
+                }}
+              >
+                click to continue
+              </span>
+              <button
+                onClick={() => { if (p2ExitStep === 0) { setP2ExitTarget('close'); setP2ExitStep(1); } }}
+                style={{
+                  position: 'absolute',
+                  top: '1.5rem',
+                  right: '2rem',
+                  zIndex: 10,
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '1.5rem',
+                  color: '#fff',
+                  background: 'none',
+                  border: 'none',
+                  cursor: p2ExitStep === 0 ? 'pointer' : 'default',
+                  opacity: p2ExitStep === 0 ? 0.5 : 0,
+                  transition: 'opacity 0.3s ease',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  pointerEvents: p2ExitStep === 0 ? 'auto' : 'none',
+                }}
+                onMouseEnter={(e) => { if (p2ExitStep === 0) e.currentTarget.style.opacity = 1; }}
+                onMouseLeave={(e) => { if (p2ExitStep === 0) e.currentTarget.style.opacity = 0.5; }}
+              >
+                &#10005;
+              </button>
+            </>
+          )}
+          {bgPageIndex === 2 && (
+            <>
+              <video
+                ref={pasilyoVideoRef}
+                loop
+                muted
+                playsInline
+                src={currentSongIndex === 0 ? '/video/pasilyo.mp4' : currentSongIndex === 1 ? '/video/tibok.mp4' : '/video/glue.mp4'}
+                onLoadedData={() => setVideoLoaded(true)}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  zIndex: 1,
+                  pointerEvents: 'none',
+                  opacity: songPlaying && videoLoaded ? 1 : 0,
+                  transition: 'opacity 0.6s ease',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 2,
+                  background: 'rgba(0,0,0,0.5)',
+                  pointerEvents: 'none',
+                  opacity: songPlaying ? 1 : 0,
+                  transition: 'opacity 0.6s ease',
+                }}
+              />
+              <div
+                ref={scrollRef}
+                onScroll={() => { if (!scrollRef.current) return; const sy = scrollRef.current.scrollTop; if (songPlaying && sy < scrollLockRef.current) { scrollRef.current.scrollTop = scrollLockRef.current; return; } setScrollY(sy); }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 5,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                }}
+              >
+                <div style={{ height: 'calc(149vh + 370px)' }} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '30%',
+                    top: '50vh',
+                    transform: p3Step >= 1
+                      ? `translate(calc(-50% + ${-Math.min(1, scrollY / 300) * 100}vw), -50%) rotate(3deg)`
+                      : 'translateX(-100vw) translate(-50%, -50%) rotate(3deg)',
+                    transition: p3Step >= 1 && scrollY === 0 ? 'transform 1.2s cubic-bezier(0.25, 1.2, 0.5, 1)' : 'none',
+                    opacity: p3Step >= 1 ? 1 : 0,
+                  }}
+                >
+                  <img
+                    src="/moments/tulip1.webp"
+                    alt=""
+                    style={{
+                      width: 'auto',
+                      height: 'min(100vh, 600px)',
+                      objectFit: 'contain',
+                      display: 'block',
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '70%',
+                    top: '55vh',
+                    transform: 'translate(-50%, -50%)',
+                    width: 'min(500px, 38vw)',
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontStyle: 'italic',
+                    fontSize: 'clamp(1rem, 1.8vw, 1.4rem)',
+                    lineHeight: 2,
+                    color: '#3a2a24',
+                    opacity: Math.max(0, 1 - scrollY / 300) * (p3Step >= 1 ? 1 : 0),
+                    transition: 'opacity 1s ease',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  A few things I want you to remember.
+                  You never have to force yourself to be okay around me.
+                  If you're happy, I'll celebrate with you.
+                  If you're tired, I'll understand.
+                  If you're stressed, I'll listen.
+                  If you're having a bad day, you don't have to pretend that everything is fine.
+                  You don't always have to be strong.
+                  I want you to know that my care for you isn't only there during the good days. It's there during the quiet days, the messy days, and the days when you feel like disappearing from everyone else.
+                </div>
+
+                <audio ref={pasilyoRef} src={songData[currentSongIndex].audio} loop preload="auto" />
+
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '149vh',
+                    width: 'min(900px, 85vw)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3rem',
+                    opacity: Math.max(0, Math.min(1, (scrollY - 300) / 350) - Math.max(0, Math.min(1, (scrollY - 1600) / 350))),
+                    transform: `translate(-50%, calc(-50% + ${40 * (1 - Math.max(0, Math.min(1, (scrollY - 300) / 350)))}px))`,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <div style={{ flex: 1, textAlign: 'right', transform: p3ExitStep >= 1 ? 'translateX(-250px)' : 'translateX(0)', opacity: p3ExitStep >= 1 ? 0 : 1, transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease' }}>
+                    <h2
+                      style={{
+                        fontFamily: "'Libre Baskerville', serif",
+                        fontStyle: 'italic',
+                        fontSize: 'clamp(3.0rem, 2.2vw, 1.8rem)',
+                        color: currentSongIndex === 0 && songPlaying ? '#fff' : '#3a2a24',
+                        lineHeight: 1.5,
+                        fontWeight: 400,
+                        opacity: songPlaying ? 0 : 1,
+                        textShadow: currentSongIndex === 0 && songPlaying
+                          ? '0 0 30px rgba(255,255,255,0.8), 0 0 60px rgba(255,255,255,0.5), 0 0 100px rgba(255,255,255,0.3)'
+                          : 'none',
+                        transition: 'opacity 0.5s ease, color 0.6s ease',
+                      }}
+                    >
+                      These are the songs that reminds me of you
+                    </h2>
+                  </div>
+
+                  <div
+                    style={{
+                      flex: '0 0 450px',
+                      height: '380px',
+                      position: 'relative',
+                      background: 'linear-gradient(160deg, #1a1a2e 0%, #16213e 100%)',
+                      borderRadius: '14px',
+                      padding: '1.2rem',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+                      color: '#fff',
+                      pointerEvents: 'auto',
+                      overflow: 'visible',
+                      transform: p3ExitStep >= 1 ? 'translateX(300px)' : 'translateX(0)',
+                      opacity: p3ExitStep >= 1 ? 0 : 1,
+                      transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease',
+                    }}
+                  >
+                    <img
+                      src={songData[currentSongIndex].gif}
+                      alt=""
+                      style={{
+                        position: 'absolute',
+                        bottom: '-20px',
+                        right: '-90px',
+                        width: '240px',
+                        height: '240px',
+                        borderRadius: '8px',
+                        objectFit: 'cover',
+                        pointerEvents: 'none',
+                        zIndex: 3,
+                      }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '0.8rem' }}>
+                      <img
+                        src={songData[currentSongIndex].image}
+                        alt=""
+                        style={{
+                          width: '250px',
+                          height: '250px',
+                          borderRadius: '6px',
+                          objectFit: 'cover',
+                          display: 'block',
+                        }}
+                      />
+                      <div>
+                        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1rem', fontWeight: 600 }}>{songData[currentSongIndex].title}</div>
+                        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{songData[currentSongIndex].artist}</div>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '3px',
+                        background: 'rgba(255,255,255,0.15)',
+                        borderRadius: '2px',
+                        marginBottom: '0.8rem',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: songPlaying ? '45%' : '0%',
+                          height: '100%',
+                          background: '#1db954',
+                          borderRadius: '2px',
+                          transition: 'width 0.3s linear',
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); prevSong(); }}
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          background: '#666',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#1db954'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#666'; e.currentTarget.style.transform = 'scale(1)'; }}
+                      >
+                        &#9664;
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); togglePasilyo(); }}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          background: '#1db954',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '1rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'transform 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                      >
+                        {songPlaying ? (
+                          <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
+                            <rect x="1" y="1" width="3.5" height="12" rx="0.5" />
+                            <rect x="7.5" y="1" width="3.5" height="12" rx="0.5" />
+                          </svg>
+                        ) : (
+                          <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
+                            <path d="M2 1 L11 7 L2 13 Z" />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); nextSong(); }}
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          background: '#666',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#1db954'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#666'; e.currentTarget.style.transform = 'scale(1)'; }}
+                      >
+                        &#9654;
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '0.6rem' }}>
+                      {songData.map((_, i) => (
+                        <div
+                          key={i}
+                          onClick={() => setCurrentSongIndex(i)}
+                          style={{
+                            width: i === currentSongIndex ? '18px' : '6px',
+                            height: '6px',
+                            borderRadius: '3px',
+                            background: i === currentSongIndex ? '#1db954' : 'rgba(255,255,255,0.25)',
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <span
+                onClick={() => { if (p3ExitStep === 0) setP3ExitStep(1); }}
+                style={{
+                  position: 'fixed',
+                  left: '50%',
+                  bottom: '10%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 15,
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  color: 'var(--rose)',
+                  cursor: p3ExitStep === 0 ? 'pointer' : 'default',
+                  letterSpacing: '0.05em',
+                  opacity: p3ExitStep >= 1 ? 0 : scrollY > sectionTopPx - vh + 80 ? 1 : 0,
+                  transition: 'opacity 0.8s ease',
+                  pointerEvents: p3ExitStep === 0 ? 'auto' : 'none',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+              >
+                click to continue
+              </span>
+              <button
+                onClick={() => { scrollLockRef.current = 0; const a = pasilyoRef.current; if (a) { a.pause(); a.currentTime = 0; } setSongPlaying(false); setShowBgPage(false); setBgPageIndex(0); setP3Step(0); setP3ExitStep(0); setShowPage4(false); setPageFade(1); }}
+                style={{
+                  position: 'fixed',
+                  top: '1.5rem',
+                  right: '2rem',
+                  zIndex: 10,
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '1.5rem',
+                  color: '#fff',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  opacity: 0.5,
+                  transition: 'opacity 0.3s ease',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = 1)}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = 0.5)}
+              >
+                &#10005;
+              </button>
+            </>
+          )}
+          {showPage4 && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 50,
+                background: '#000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: "'Cormorant Garamond', serif",
+              }}
+            >
+              <div
+                style={{
+                  opacity: p4Step >= 1 ? 1 : 0,
+                  transition: 'opacity 2s ease',
+                  fontFamily: "'Libre Baskerville', serif",
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
+                  color: 'rgba(255,255,255,0.8)',
+                  textAlign: 'center',
+                  padding: '2rem',
+                }}
+              >
+                And if you're wondering...
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {amourRevealed && <div style={{ display: showLockPage || showBgPage ? 'none' : undefined }}><MusicPlayer externalPauseTrigger={bgMusicPauseTrigger} externalResumeTrigger={bgMusicResumeTrigger} /></div>}
+    </>
+  );
+}
