@@ -1837,12 +1837,12 @@ export default function App() {
                   </div>
 
                   <div style={{ maxWidth: '520px', width: '100%', background: 'linear-gradient(160deg, #fdf6ed, #f5ede0)', borderRadius: '16px', padding: '2.5rem 2rem', boxShadow: '0 12px 48px rgba(0,0,0,0.4)', animation: boxShowFinal ? 'none' : 'fadeUp 0.6s ease' }}>
-                    <div style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2vw, 1.4rem)', color: '#3a2a24', marginBottom: '1rem', fontWeight: 600, textAlign: 'center' }}>
-                      {boxCards[boxCardIndex].title}
-                    </div>
-                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.05rem', color: '#5a4a44', lineHeight: 1.85, textAlign: 'center', fontStyle: 'italic' }}>
-                      {boxCards[boxCardIndex].text}
-                    </div>
+<div style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.5rem, 3vw, 2rem)', color: '#3a2a24', marginBottom: '1rem', fontWeight: 600, textAlign: 'center' }}>
+                  {boxCards[boxCardIndex].title}
+                </div>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.35rem', color: '#5a4a44', lineHeight: 1.85, textAlign: 'center', fontStyle: 'italic' }}>
+                  {boxCards[boxCardIndex].text}
+                </div>
                   </div>
 
                   {!boxShowFinal && (
