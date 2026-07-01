@@ -1842,7 +1842,7 @@ export default function App() {
                   fontStyle: 'italic',
                   fontWeight: 600,
                   fontSize: '1rem',
-                  color: 'var(--rose)',
+                  color: songPlaying ? '#fff' : 'var(--rose)',
                   cursor: p3ExitStep === 0 ? 'pointer' : 'default',
                   letterSpacing: '0.05em',
                   opacity: p3ExitStep >= 1 ? 0 : (scrollY > musicTop - vh * 0.5 ? 1 : 0),
@@ -1985,19 +1985,6 @@ export default function App() {
                     </div>
                   )}
 
-                  <button
-                    onClick={() => { setBoxOpen(false); setBoxCardIndex(0); setBoxShowFinal(false); }}
-                    style={{
-                      position: 'fixed', top: '1.5rem', right: '2rem', zIndex: 510,
-                      fontFamily: "'Cinzel', serif", fontSize: '1.5rem', color: '#fff',
-                      background: 'none', border: 'none', cursor: 'pointer', opacity: 0.4,
-                      transition: 'opacity 0.3s ease',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = 0.8}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = 0.4}
-                  >
-                    &#10005;
-                  </button>
                 </div>
               )}
             </>
@@ -2077,9 +2064,9 @@ export default function App() {
                       <div style={{ textAlign: 'center', marginTop: '2.5rem', position: 'relative', zIndex: 1 }}>
                         <span
                           onClick={() => setP4Step(20)}
-                          style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontWeight: 500, fontSize: '1rem', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', letterSpacing: '0.05em', paddingBottom: '2px', transition: 'color 0.3s ease' }}
+                          style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontWeight: 500, fontSize: '1rem', color: songPlaying ? '#fff' : 'rgba(255,255,255,0.7)', cursor: 'pointer', letterSpacing: '0.05em', paddingBottom: '2px', transition: 'color 0.3s ease' }}
                           onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = ''}
                         >
                           click to continue
                         </span>
