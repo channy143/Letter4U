@@ -1830,6 +1830,12 @@ export default function App() {
 
               </div>
 
+              <div style={{ position: 'fixed', left: '0', right: '0', bottom: '4%', zIndex: 20, display: 'flex', justifyContent: 'center', opacity: scrollY < musicTop * 0.7 ? Math.max(0, 1 - scrollY / (musicTop * 0.5)) : 0, transition: 'opacity 0.4s ease', pointerEvents: 'none' }}>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.3rem', fontWeight: 700, color: '#000', letterSpacing: '0.1em', textShadow: '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff', animation: 'bounce 2s ease-in-out infinite' }}>
+                  scroll more &#8595;
+                </div>
+              </div>
+
               <span
                 onClick={() => { if (p3ExitStep === 0) setP3ExitStep(1); }}
                 style={{

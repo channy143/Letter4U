@@ -220,6 +220,11 @@ body {
   100% { opacity: 0; }
 }
 
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
 @keyframes flowDown {
   0% { transform: translateY(-1006.66vh); }
   100% { transform: translateY(0); }
