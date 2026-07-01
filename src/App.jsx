@@ -44,9 +44,8 @@ export default function App() {
   const [p3ExitStep, setP3ExitStep] = useState(0);
   const [showPage4, setShowPage4] = useState(false);
   const [p4Step, setP4Step] = useState(0);
-  const [p4WordsVisible, setP4WordsVisible] = useState(0);
-  const [p5Active, setP5Active] = useState(false);
-  const [p5LinesVisible, setP5LinesVisible] = useState(0);
+  const [p4LetterWordsVisible, setP4LetterWordsVisible] = useState(0);
+  const [p4TypewriterChars, setP4TypewriterChars] = useState(0);
   const [stickyFlipped, setStickyFlipped] = useState([false, false, false, false, false, false]);
   const [boxOpen, setBoxOpen] = useState(false);
   const [boxCardIndex, setBoxCardIndex] = useState(0);
@@ -80,14 +79,24 @@ export default function App() {
     { emoji: '\uD83C\uDF19', subtitle: 'The hope.', body: "Not because we're already there, but because it reminds me of the kind of future I'd love to build\u2014with patience, trust, and genuine care." },
   ];
 
-  const p4Message = "I'm not here because things are easy. I'm here because it's you. I enjoy your company, your personality, your smile, your stories, and even your little quirks that make you who you are. No matter how busy life gets, I hope you never forget that there's someone cheering you on, genuinely caring about your well-being, and hoping to see you smile—even on the days when things feel heavy. And if you ever doubt yourself, come back to this page and read this again.";
+  const p4QA = [
+    ['whether you\u2019re appreciated\u2014', 'You are.'],
+    ['whether someone is quietly rooting for you\u2014', 'I am.'],
+    ['whether you have to figure everything out on your own\u2014', 'You don\u2019t.'],
+    ['whether I\u2019ll still be here cheering you on\u2014', 'Absolutely.'],
+  ];
 
-  const p5Lines = [
+  const p4NewLetter = "Looking back at these moments, I realize it was never about doing anything extraordinary. It was the ordinary conversations, the random laughs, the little updates about our day, and simply having someone to share them with. You became someone I genuinely enjoy having in my life, and I'm grateful that our paths crossed. Wherever life takes us, I hope you never forget how appreciated you are\u2014not just by me, but for the person you are. If one day you begin doubting yourself, come back here for a little reminder.";
+
+  const p4Sentences = [
+    'And before you go...',
     'You are appreciated.',
     'You are valued.',
     'You are important.',
-    "And I'm really glad I met you.\u2764\ufe0f",
+    "And I'm really glad we met. \u2764\ufe0f",
   ];
+
+  const p4TypewriterText = "Thank you for reading my little corner of the internet. I made this because sometimes words are easier to write than to say. Whether you visit this once or a hundred times, I hope every time you leave, you take at least one reminder with you\u2014that someone is quietly cheering for you, proud of you, and grateful that you're part of their life. Take care, kikay. \ud83e\udd0d";
 
   const stickyNotes = [
     { emoji: '\uD83C\uDF71', text: "Don't forget to eat on busy days." },
@@ -248,28 +257,61 @@ export default function App() {
   }, [p3ExitStep]);
 
   useEffect(() => {
-    if (!showPage4) { setP4Step(0); setP4WordsVisible(0); return; }
-    const t1 = setTimeout(() => setP4Step(1), 3000);
-    const t2 = setTimeout(() => setP4Step(2), 6000);
-    const t3 = setTimeout(() => setP4Step(3), 9000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    if (!showPage4) { setP4Step(0); setP4LetterWordsVisible(0); setP4TypewriterChars(0); return; }
+    const delays = [3000, 2500, 1500, 500, 2000, 2500, 2000, 2500, 2000, 2500, 2000, 3000, 1200];
+    const timers = [];
+    delays.forEach((d, i) => {
+      const t = setTimeout(() => setP4Step(i + 1), d + (i > 0 ? delays.slice(0, i).reduce((a, b) => a + b, 0) : 0));
+      timers.push(t);
+    });
+    return () => timers.forEach(clearTimeout);
   }, [showPage4]);
 
   useEffect(() => {
-    if (p4Step !== 3) { setP4WordsVisible(0); return; }
-    const words = p4Message.split(' ');
+    if (p4Step !== 13) { setP4LetterWordsVisible(0); return; }
+    const words = p4NewLetter.split(' ');
     const interval = setInterval(() => {
-      setP4WordsVisible(v => Math.min(v + 1, words.length));
-    }, 100);
+      setP4LetterWordsVisible(v => Math.min(v + 3, words.length));
+    }, 60);
     return () => clearInterval(interval);
   }, [p4Step]);
 
   useEffect(() => {
-    if (!p5Active) { setP5LinesVisible(0); return; }
-    if (p5LinesVisible >= p5Lines.length) return;
-    const t = setTimeout(() => setP5LinesVisible(v => v + 1), 1000);
+    if (p4Step < 21 || p4Step > 28) return;
+    let delay;
+    if (p4Step >= 21 && p4Step <= 24) delay = 2500;
+    else if (p4Step === 25) delay = 5000;
+    else if (p4Step === 26) delay = 500;
+    else if (p4Step === 27) return;
+    else if (p4Step === 28) delay = 2000;
+    else return;
+    const t = setTimeout(() => setP4Step(p4Step + 1), delay);
     return () => clearTimeout(t);
-  }, [p5Active, p5LinesVisible]);
+  }, [p4Step]);
+
+  useEffect(() => {
+    if (p4Step !== 29) return;
+    setShowPage4(false);
+    setP4Step(0);
+    setP4LetterWordsVisible(0);
+    setP4TypewriterChars(0);
+  }, [p4Step]);
+
+  useEffect(() => {
+    if (p4Step !== 27) { setP4TypewriterChars(0); return; }
+    const total = p4TypewriterText.length;
+    const interval = setInterval(() => {
+      setP4TypewriterChars(pc => {
+        if (pc >= total) return pc;
+        const next = pc + 1;
+        if (next >= total) {
+          setTimeout(() => setP4Step(28), 5000);
+        }
+        return next;
+      });
+    }, 30);
+    return () => clearInterval(interval);
+  }, [p4Step]);
 
   useEffect(() => {
     setVideoLoaded(false);
@@ -384,6 +426,7 @@ export default function App() {
   const boxTop = 2 * vh;
   const musicTop = 3 * vh;
   const flippedCount = stickyFlipped.filter(Boolean).length;
+  const musicEntryP = Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen));
 
   return (
     <>
@@ -1550,7 +1593,7 @@ export default function App() {
                 transition: 'none',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '3rem', width: '100%' }}>
-                  <div style={{ flex: 1, textAlign: 'right', transform: p3ExitStep >= 1 ? 'translateX(-250px)' : 'translateX(0)', opacity: p3ExitStep >= 1 ? 0 : 1, transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease' }}>
+                  <div style={{ flex: 1, textAlign: 'right', transform: p3ExitStep >= 1 ? 'translateX(-250px)' : `translateX(${(1 - musicEntryP) * -200}px)`, opacity: p3ExitStep >= 1 ? 0 : 1, transition: p3ExitStep >= 1 ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease' : 'none' }}>
                     <h2
                       style={{
                         fontFamily: "'Libre Baskerville', serif",
@@ -1581,9 +1624,9 @@ export default function App() {
                       boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
                       color: '#fff',
                       overflow: 'visible',
-                      transform: p3ExitStep >= 1 ? 'translateX(300px)' : 'translateX(0)',
+                      transform: p3ExitStep >= 1 ? 'translateX(300px)' : `translateX(${(1 - musicEntryP) * 200}px)`,
                       opacity: p3ExitStep >= 1 ? 0 : 1,
-                      transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease',
+                      transition: p3ExitStep >= 1 ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease' : 'none',
                     }}
                   >
                     <div
@@ -1935,224 +1978,82 @@ export default function App() {
               )}
             </>
           )}
-          {showPage4 && (
+          {/* PAGE 4: Main overlay (QA + Letter) */}
+          {showPage4 && p4Step < 20 && (
             <div
               style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 50,
-                background: '#000',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                position: 'absolute', inset: 0, zIndex: 50,
+                background: '#000', overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 paddingLeft: '300px',
+                opacity: p4Step >= 20 ? 0 : 1,
+                transition: p4Step >= 20 ? 'opacity 1.2s ease' : 'none',
               }}
             >
               <WebGLBackground />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '72%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  opacity: p4Step === 1 ? 1 : 0,
-                  transition: p4Step === 2 ? 'opacity 3s ease' : 'opacity 1.5s ease',
-                  textAlign: 'center',
-                  pointerEvents: 'none',
-                }}
-              >
+
+              {/* "And if you're wondering..." - fades in at step 1, fades out at step 2 */}
+              {showPage4 && (
                 <div
                   style={{
-                    fontFamily: "'Libre Baskerville', serif",
-                    fontStyle: 'italic',
-                    fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
-                    color: 'rgba(255,255,255,0.8)',
-                    marginBottom: '2rem',
+                    position: 'absolute', top: '72%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    textAlign: 'center', pointerEvents: 'none',
+                    opacity: p4Step === 1 ? 1 : 0,
+                    transition: 'opacity 1s ease',
                   }}
                 >
-                  And if you're wondering...
+                  <div style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.4rem, 2.5vw, 2rem)', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem' }}>
+                    And if you're wondering...
+                  </div>
+                  <img src="/moments/cat11.gif" alt="" style={{ width: 'min(400px, 40vw)', height: 'auto', borderRadius: '12px', display: 'block', margin: '0 auto' }} />
                 </div>
-                <img
-                  src="/moments/cat11.gif"
-                  alt=""
-                  style={{
-                    width: 'min(400px, 40vw)',
-                    height: 'auto',
-                    borderRadius: '12px',
-                    display: 'block',
-                    margin: '0 auto',
-                  }}
-                />
-              </div>
+              )}
 
-              {p4Step >= 3 && (
+              {/* QA pairs - appear after heading fades out (step 4+), all visible at step 11, fade out at step 12 */}
+              {p4Step >= 3 && p4Step < 13 && (
+                <div
+                  style={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    textAlign: 'center', pointerEvents: 'none',
+                    opacity: p4Step >= 4 && p4Step <= 11 ? 1 : 0,
+                    transition: 'opacity 1s ease',
+                  }}
+                >
+                  {(() => {
+                    const activePair = p4Step < 4 ? -1 : Math.min(3, Math.floor((p4Step - 4) / 2));
+                    const showAnswer = p4Step >= 5 && (p4Step - 5) % 2 === 0;
+                    return p4QA.map((qa, idx) => (
+                      <div key={idx} style={{ opacity: idx <= activePair ? 1 : 0, transform: idx <= activePair ? 'translateY(0)' : 'translateY(20px)', transition: 'opacity 0.8s ease, transform 0.8s ease', marginBottom: '1.5rem' }}>
+                        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(1rem, 1.8vw, 1.2rem)', color: 'rgba(255,255,255,0.7)', fontStyle: 'italic' }}>{qa[0]}</div>
+                        <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: 'clamp(1.2rem, 2vw, 1.5rem)', fontWeight: 700, color: '#fff', opacity: idx < activePair || (idx === activePair && showAnswer) ? 1 : 0, transition: 'opacity 0.8s ease', marginTop: '0.3rem' }}>{qa[1]}</div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+
+              {/* Phase B: Photo strip + Letter */}
+              {p4Step >= 13 && p4Step < 20 && (
                 <>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: 100,
-                      top: 0,
-                      width: '300px',
-                      height: '100%',
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.06) 100%)',
-                      borderRight: '1px solid rgba(255,255,255,0.08)',
-                      pointerEvents: 'none',
-                      animation: 'slideDown 1s cubic-bezier(0.22, 1, 0.36, 1) forwards',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        animation: 'flowDown 120s linear infinite',
-                      }}
-                    >
+                  <div style={{ position: 'absolute', left: 100, top: 0, width: '300px', height: '100%', background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.06) 100%)', borderRight: '1px solid rgba(255,255,255,0.08)', pointerEvents: 'none', animation: 'slideDown 1s cubic-bezier(0.22, 1, 0.36, 1) forwards', overflow: 'hidden' }}>
+                    <div style={{ animation: 'flowDown 120s linear infinite' }}>
                       {p4StripImages.concat(p4StripImages).map((src, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            width: '300px',
-                            height: '50.333vh',
-                            backgroundImage: `url(${src})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                          }}
-                        />
+                        <div key={idx} style={{ width: '300px', height: '50.333vh', backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                       ))}
                     </div>
                   </div>
-                  <div
-                    style={{
-                      maxWidth: '700px',
-                      padding: '2.5rem',
-                      animation: 'fadeIn 2s ease',
-                      position: 'relative',
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'rgba(0,0,0,0.3)',
-                        backdropFilter: 'blur(10px)',
-                        WebkitBackdropFilter: 'blur(10px)',
-                        maskImage: 'radial-gradient(ellipse 60% 50% at center, black 60%, transparent 100%)',
-                        WebkitMaskImage: 'radial-gradient(ellipse 60% 50% at center, black 60%, transparent 100%)',
-                        pointerEvents: 'none',
-                        borderRadius: '40px',
-                      }}
-                    />
-                    {!p5Active && (
-                      <div
-                        style={{
-                          fontFamily: "'Cormorant Garamond', serif",
-                          fontSize: 'clamp(1.1rem, 2vw, 1.5rem)',
-                          lineHeight: 2,
-                          color: 'rgba(255,255,255,0.85)',
-                          fontStyle: 'italic',
-                          textAlign: 'left',
-                          position: 'relative',
-                          zIndex: 1,
-                        }}
-                      >
-                        {p4Message.split(' ').slice(0, p4WordsVisible).join(' ')}
-                      </div>
-                    )}
-                    {p5Active && (
-                      <div
-                        style={{
-                          position: 'relative',
-                          zIndex: 1,
-                          textAlign: 'center',
-                          padding: '1rem 0',
-                        }}
-                      >
-                        {p5Lines.slice(0, p5LinesVisible).map((line, i) => (
-                          <div
-                            key={i}
-                            style={{
-                              fontFamily: "'Libre Baskerville', serif",
-                              fontStyle: 'italic',
-                              fontSize: 'clamp(1.2rem, 2.2vw, 1.8rem)',
-                              color: 'rgba(255,255,255,0.9)',
-                              lineHeight: 2.2,
-                              opacity: 1,
-                              animation: 'fadeUp 0.6s ease',
-                            }}
-                          >
-                            {line}
-                          </div>
-                        ))}
-                        {p5LinesVisible >= p5Lines.length && (
-                          <div style={{ marginTop: '3rem' }}>
-                            <span
-                              onClick={() => {
-                                setShowPage4(false);
-                                setP4Step(0);
-                                setP4WordsVisible(0);
-                                setP5Active(false);
-                                setP5LinesVisible(0);
-                                setShowBgPage(false);
-                                setBgPageIndex(0);
-                                setP3Step(0);
-                                setP3ExitStep(0);
-                                setPageFade(1);
-                                const a = pasilyoRef.current;
-                                if (a) { a.pause(); a.currentTime = 0; }
-                                setSongPlaying(false);
-                                scrollLockRef.current = 0;
-                              }}
-                              style={{
-                                fontFamily: "'Cormorant Garamond', serif",
-                                fontStyle: 'italic',
-                                fontSize: '0.95rem',
-                                color: 'rgba(255,255,255,0.4)',
-                                cursor: 'pointer',
-                                letterSpacing: '0.08em',
-                                borderBottom: '1px solid rgba(255,255,255,0.15)',
-                                paddingBottom: '2px',
-                                transition: 'color 0.3s ease',
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
-                            >
-                              Go back to Main Menu
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {p5Active && p5LinesVisible >= p5Lines.length && (
-                      <img
-                        src="/moments/cat8.gif"
-                        alt=""
-                        style={{
-                          position: 'absolute',
-                          bottom: '-160px',
-                          right: '110px',
-                          width: '300px',
-                          height: 'auto',
-                          borderRadius: '12px',
-                          zIndex: 3,
-                          pointerEvents: 'none',
-                        }}
-                      />
-                    )}
-                    {!p5Active && p4WordsVisible >= p4Message.split(' ').length && (
+                  <div style={{ maxWidth: '700px', padding: '2.5rem', animation: 'fadeIn 2s ease', position: 'relative' }}>
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', maskImage: 'radial-gradient(ellipse 60% 50% at center, black 60%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 60% 50% at center, black 60%, transparent 100%)', pointerEvents: 'none', borderRadius: '40px' }} />
+                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(1.1rem, 2vw, 1.5rem)', lineHeight: 2, color: 'rgba(255,255,255,0.85)', fontStyle: 'italic', textAlign: 'left', position: 'relative', zIndex: 1 }}>
+                      {p4NewLetter.split(' ').slice(0, p4LetterWordsVisible).join(' ')}
+                    </div>
+                    {p4LetterWordsVisible >= p4NewLetter.split(' ').length && (
                       <div style={{ textAlign: 'center', marginTop: '2.5rem', position: 'relative', zIndex: 1 }}>
                         <span
-                          onClick={() => setP5Active(true)}
-                          style={{
-                            fontFamily: "'Cormorant Garamond', serif",
-                            fontStyle: 'italic',
-                            fontWeight: 500,
-                            fontSize: '1rem',
-                            color: 'rgba(255,255,255,0.7)',
-                            cursor: 'pointer',
-                            letterSpacing: '0.05em',
-                            paddingBottom: '2px',
-                            transition: 'color 0.3s ease',
-                          }}
+                          onClick={() => setP4Step(21)}
+                          style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontWeight: 500, fontSize: '1rem', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', letterSpacing: '0.05em', paddingBottom: '2px', transition: 'color 0.3s ease' }}
                           onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
                           onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
                         >
@@ -2163,6 +2064,25 @@ export default function App() {
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {/* PAGE 4: Sentences overlay */}
+          {showPage4 && p4Step >= 21 && p4Step <= 26 && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 51, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {p4Sentences.map((s, i) => (
+                <div key={i} style={{ position: 'absolute', fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.5rem, 2.8vw, 2.2rem)', color: 'rgba(255,255,255,0.9)', textAlign: 'center', opacity: p4Step - 21 === i ? 1 : 0, transition: 'opacity 0.8s ease', pointerEvents: 'none' }}>{s}</div>
+              ))}
+            </div>
+          )}
+
+          {/* PAGE 4: Typewriter overlay (fades to black at step 28, exits at step 29) */}
+          {showPage4 && p4Step >= 27 && p4Step <= 28 && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 52, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: p4Step === 28 ? 0 : 1, transition: 'opacity 2s ease' }}>
+              <div style={{ maxWidth: '750px', padding: '2rem', fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(1rem, 1.8vw, 1.3rem)', lineHeight: 1.9, color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontStyle: 'italic' }}>
+                {p4TypewriterText.slice(0, p4TypewriterChars)}
+                {p4TypewriterChars < p4TypewriterText.length && <span style={{ animation: 'blink 1s step-end infinite' }}>|</span>}
+              </div>
             </div>
           )}
         </div>

@@ -233,6 +233,9 @@ body {
   100% { transform: rotate(0deg); }
 }
 
-
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
 
 
