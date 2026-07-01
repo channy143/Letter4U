@@ -50,6 +50,7 @@ export default function App() {
   const [boxOpen, setBoxOpen] = useState(false);
   const [boxCardIndex, setBoxCardIndex] = useState(0);
   const [boxShowFinal, setBoxShowFinal] = useState(false);
+  const [exitOverlay, setExitOverlay] = useState(false);
   const p4StripImages = [
     '/moments/1.jpg', '/moments/2.jpg', '/moments/3.jpg', '/moments/4.jpg',
     '/moments/5.jpg', '/moments/6.png', '/moments/7.jpg', '/moments/8.jpg',
@@ -303,23 +304,19 @@ export default function App() {
 
   useEffect(() => {
     if (p4Step !== 29) return;
-    const t = setTimeout(() => setP4Step(30), 5000);
+    const t = setTimeout(() => setP4Step(30), 3000);
     return () => clearTimeout(t);
   }, [p4Step]);
 
   useEffect(() => {
     if (p4Step !== 30) return;
-    const t = setTimeout(() => setP4Step(31), 1500);
-    return () => clearTimeout(t);
-  }, [p4Step]);
-
-  useEffect(() => {
-    if (p4Step !== 31) return;
     setShowPage4(false);
     setShowBgPage(false);
     setP4Step(0);
     setP4LetterWordsVisible(0);
     setP4TypewriterChars(0);
+    setExitOverlay(true);
+    setTimeout(() => setExitOverlay(false), 2000);
   }, [p4Step]);
 
   useEffect(() => {
@@ -350,35 +347,8 @@ export default function App() {
     return () => clearTimeout(t);
   }, [amourRevealed]);
 
-  const videoSources = ['/video/pasilyo.mp4', '/video/glue.mp4', '/video/tibok.mp4', '/video/palagi.mp4', '/video/ikawatako.mp4'];
-
-  // Preload first video immediately on mount, cache for later song plays
-  useEffect(() => {
-    const vid = document.createElement('video');
-    vid.preload = 'auto';
-    vid.muted = true;
-    vid.src = videoSources[0];
-    vid.style.cssText = 'position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0.01;pointer-events:none';
-    vid.load();
-    document.body.appendChild(vid);
-    return () => { if (vid.parentNode) vid.parentNode.removeChild(vid); };
-  }, []);
-
   useEffect(() => {
     setVideoLoaded(false);
-  }, [currentSongIndex]);
-
-  // Preload next video when song changes
-  useEffect(() => {
-    const nextIdx = currentSongIndex + 1;
-    if (nextIdx >= videoSources.length) return;
-    const vid = document.createElement('video');
-    vid.preload = 'auto';
-    vid.muted = true;
-    vid.src = videoSources[nextIdx];
-    vid.style.cssText = 'position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0.01;pointer-events:none';
-    vid.load();
-    document.body.appendChild(vid);
   }, [currentSongIndex]);
 
   useEffect(() => {
@@ -1081,8 +1051,8 @@ export default function App() {
           {bgPageIndex === 0 && <><div
             style={{
               position: 'absolute',
-              left: '47%',
-              top: '40%',
+              left: '46%',
+              top: '38%',
               transform: bgExitStep >= 2 ? 'translateX(80px) translate(-50%, -50%)' : bgRevealStep >= 2 ? 'translate(-50%, -50%)' : 'translateX(80px) translate(-50%, -50%)',
               width: 'min(800px, 50vw)',
               maxHeight: 'calc(76vh + 400px)',
@@ -1098,7 +1068,7 @@ export default function App() {
               transition: 'opacity 0.8s ease, transform 0.8s ease',
             }}
           >
-            You may not realize it, but you've brought so much happiness into my life. Some days become lighter just because I got to talk to you. Some moments become special simply because you were part of them.
+            Thank you for being you. You may not realize it, but you've brought so much happiness into my life. Some days become lighter just because I got to talk to you. Some moments become special simply because you were part of them.
           </div>
           <div
             style={{
@@ -1119,7 +1089,7 @@ export default function App() {
               transition: 'opacity 0.8s ease, transform 0.8s ease',
             }}
           >
-            Thank you for the laughs, the random conversations, the small updates about your day, and even the moments when you just stayed. Thank you for allowing me to know the real you.
+            Thank you for the laughs, the random conversations, the small updates about your day, and even the moments when you just stayed. Thank you for letting me get to know you, little by little.
           </div>
           {bgPageIndex === 0 && (
             <span
@@ -1406,7 +1376,7 @@ export default function App() {
                 muted
                 playsInline
                 preload="auto"
-                src={videoSources[currentSongIndex]}
+                src={['/video/pasilyo.mp4', '/video/glue.mp4', '/video/tibok.mp4', '/video/palagi.mp4', '/video/ikawatako.mp4'][currentSongIndex]}
                 onCanPlay={() => setVideoLoaded(true)}
                 style={{
                   position: 'absolute',
@@ -2031,20 +2001,16 @@ export default function App() {
                 </div>
               )}
             </>
-            )}
-          {/* Hide Page 3 content during Phase 4 exit */}
-          {showPage4 && p4Step >= 30 && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 49, background: '#000' }} />
           )}
           {/* PAGE 4: Main overlay (QA + Letter) */}
-          {showPage4 && p4Step < 31 && (
+          {showPage4 && p4Step < 30 && (
             <div
               style={{
                 position: 'absolute', inset: 0, zIndex: 50,
                 background: '#000', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: p4Step >= 30 ? 0 : 1,
-                transition: p4Step >= 30 ? 'opacity 1.5s ease' : 'none',
+                opacity: p4Step >= 28 ? 0 : 1,
+                transition: p4Step >= 28 ? 'opacity 1.5s ease' : 'none',
                 pointerEvents: p4Step >= 28 ? 'none' : 'auto',
               }}
             >
@@ -2135,20 +2101,25 @@ export default function App() {
           )}
 
           {/* PAGE 4: Typewriter overlay (Phase D) */}
-          {showPage4 && p4Step >= 27 && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 52, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ maxWidth: '750px', padding: '2rem', fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(1rem, 1.8vw, 1.3rem)', lineHeight: 1.9, color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontStyle: 'italic', opacity: p4Step === 28 ? 0 : 1, transition: 'opacity 1.5s ease' }}>
+          {showPage4 && p4Step >= 27 && p4Step <= 28 && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 52, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: p4Step === 28 ? 0 : 1, transition: 'opacity 1.5s ease' }}>
+              <div style={{ maxWidth: '750px', padding: '2rem', fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(1rem, 1.8vw, 1.3rem)', lineHeight: 1.9, color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontStyle: 'italic' }}>
                 {p4TypewriterText.slice(0, p4TypewriterChars)}
                 {p4TypewriterChars < p4TypewriterText.length && <span style={{ animation: 'blink 1s step-end infinite' }}>|</span>}
               </div>
             </div>
           )}
 
+          {/* PAGE 4: Black overlay before main site re-entry */}
+          {showPage4 && p4Step >= 29 && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: '#000', animation: 'fadeIn 0.8s ease' }} />
+          )}
         </div>
       )}
 
       {amourRevealed && <div style={{ display: showLockPage || showBgPage ? 'none' : undefined }}><MusicPlayer externalPauseTrigger={bgMusicPauseTrigger} externalResumeTrigger={bgMusicResumeTrigger} /></div>}
 
+      {exitOverlay && <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', animation: 'fadeOut 1.5s ease forwards', pointerEvents: 'none' }} />}
     </>
   );
 }
