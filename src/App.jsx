@@ -71,7 +71,7 @@ export default function App() {
     { title: 'Tibok', artist: 'Earl Agustin', image: '/moments/16.jpg', audio: '/music/tibok.mp3', gif: '/moments/cat7.gif' },
     { title: 'Palagi', artist: 'Syd Hartha', image: '/moments/11.jpg', audio: '/music/palagi.mp3', gif: '/moments/cat12.gif' },
     { title: 'Ikaw at Ako', artist: 'Moira Dela Torre', image: '/moments/13.jpg', audio: '/music/ikawatako.mp3', gif: '/moments/cat13.gif' },
-    { title: 'Her', artist: 'Unknown', image: '/moments/her.png', audio: '/music/her.mp3', gif: '/moments/her.png' },
+    { title: 'Her', artist: 'Unknown', image: '/moments/her.png', audio: '/music/her.mp3', gif: '/moments/cat5.gif' },
   ];
 
   const letterContent = [
