@@ -57,6 +57,7 @@ export default function App() {
     '/moments/13.jpg', '/moments/14.jpg', '/moments/15.jpg', '/moments/16.jpg',
     '/moments/17.jpg', '/moments/her.png', '/moments/her1.png', '/moments/her3.png',
   ];
+
   const rootRef = useRef(null);
   const scrollRef = useRef(null);
   const pasilyoRef = useRef(null);
@@ -96,7 +97,7 @@ export default function App() {
     "And I'm really glad we met. \u2764\ufe0f",
   ];
 
-  const p4TypewriterText = "Thank you for reading my little corner of the internet. I made this because sometimes words are easier to write than to say. Whether you visit this once or a hundred times, I hope every time you leave, you take at least one reminder with you\u2014that someone is quietly cheering for you, proud of you, and grateful that you're part of their life. Take care, kikay. \ud83e\udd0d";
+  const p4TypewriterText = "Thank you for reading my little corner of the internet. I made this because sometimes words are easier to write than to say. Whether you visit this once or a hundred times, I hope every time you finish reading this, you take at least one reminder with you\u2014that someone is quietly cheering for you, proud of you, and grateful that you're part of their life. Take care, kikay.\ud83e\udd0d";
 
   const stickyNotes = [
     { emoji: '\uD83C\uDF71', text: "Don't forget to eat on busy days." },
@@ -277,21 +278,45 @@ export default function App() {
   }, [p4Step]);
 
   useEffect(() => {
-    if (p4Step < 21 || p4Step > 28) return;
+    if (p4Step !== 20) return;
+    const t = setTimeout(() => setP4Step(21), 1400);
+    return () => clearTimeout(t);
+  }, [p4Step]);
+
+  useEffect(() => {
+    if (p4Step < 21 || p4Step > 27) return;
     let delay;
     if (p4Step >= 21 && p4Step <= 24) delay = 2500;
     else if (p4Step === 25) delay = 5000;
     else if (p4Step === 26) delay = 500;
     else if (p4Step === 27) return;
-    else if (p4Step === 28) delay = 2000;
     else return;
     const t = setTimeout(() => setP4Step(p4Step + 1), delay);
     return () => clearTimeout(t);
   }, [p4Step]);
 
   useEffect(() => {
+    if (p4Step !== 28) return;
+    const t = setTimeout(() => setP4Step(29), 2000);
+    return () => clearTimeout(t);
+  }, [p4Step]);
+
+  useEffect(() => {
     if (p4Step !== 29) return;
+    const t = setTimeout(() => setP4Step(30), 5000);
+    return () => clearTimeout(t);
+  }, [p4Step]);
+
+  useEffect(() => {
+    if (p4Step !== 30) return;
+    const t = setTimeout(() => setP4Step(31), 1500);
+    return () => clearTimeout(t);
+  }, [p4Step]);
+
+  useEffect(() => {
+    if (p4Step !== 31) return;
     setShowPage4(false);
+    setShowBgPage(false);
     setP4Step(0);
     setP4LetterWordsVisible(0);
     setP4TypewriterChars(0);
@@ -305,13 +330,25 @@ export default function App() {
         if (pc >= total) return pc;
         const next = pc + 1;
         if (next >= total) {
-          setTimeout(() => setP4Step(28), 5000);
+          setTimeout(() => setP4Step(28), 7000);
         }
         return next;
       });
     }, 30);
     return () => clearInterval(interval);
   }, [p4Step]);
+
+  useEffect(() => {
+    if (!amourRevealed) return;
+    const t = setTimeout(() => {
+      if (rootRef.current) {
+        rootRef.current.style.visibility = 'visible';
+        rootRef.current.style.pointerEvents = 'auto';
+        rootRef.current.style.opacity = '1';
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [amourRevealed]);
 
   useEffect(() => {
     setVideoLoaded(false);
@@ -327,17 +364,7 @@ export default function App() {
     }
   }, [currentSongIndex, songPlaying, videoLoaded]);
 
-  useEffect(() => {
-    if (!amourRevealed) return;
-    const t = setTimeout(() => {
-      if (rootRef.current) {
-        rootRef.current.style.visibility = 'visible';
-        rootRef.current.style.pointerEvents = 'auto';
-        rootRef.current.style.opacity = '1';
-      }
-    }, 50);
-    return () => clearTimeout(t);
-  }, [amourRevealed]);
+
 
   function handlePinDigit(d) {
     if (pinUnlocked || tulipCount > 0) return;
@@ -1977,17 +2004,21 @@ export default function App() {
                 </div>
               )}
             </>
+            )}
+          {/* Hide Page 3 content during Phase 4 exit */}
+          {showPage4 && p4Step >= 30 && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 49, background: '#000' }} />
           )}
           {/* PAGE 4: Main overlay (QA + Letter) */}
-          {showPage4 && p4Step < 20 && (
+          {showPage4 && p4Step < 31 && (
             <div
               style={{
                 position: 'absolute', inset: 0, zIndex: 50,
                 background: '#000', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                paddingLeft: '300px',
-                opacity: p4Step >= 20 ? 0 : 1,
-                transition: p4Step >= 20 ? 'opacity 1.2s ease' : 'none',
+                opacity: p4Step >= 30 ? 0 : 1,
+                transition: p4Step >= 30 ? 'opacity 1.5s ease' : 'none',
+                pointerEvents: p4Step >= 28 ? 'none' : 'auto',
               }}
             >
               <WebGLBackground />
@@ -2035,16 +2066,16 @@ export default function App() {
               )}
 
               {/* Phase B: Photo strip + Letter */}
-              {p4Step >= 13 && p4Step < 20 && (
-                <>
-                  <div style={{ position: 'absolute', left: 100, top: 0, width: '300px', height: '100%', background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.06) 100%)', borderRight: '1px solid rgba(255,255,255,0.08)', pointerEvents: 'none', animation: 'slideDown 1s cubic-bezier(0.22, 1, 0.36, 1) forwards', overflow: 'hidden' }}>
+              {p4Step >= 13 && p4Step <= 20 && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: p4Step === 20 ? 0 : 1, transition: 'opacity 1.2s ease', pointerEvents: p4Step === 20 ? 'none' : 'auto' }}>
+                  <div style={{ position: 'absolute', left: 100, top: 0, width: '300px', height: '100%', background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.06) 100%)', borderRight: '1px solid rgba(255,255,255,0.08)', pointerEvents: 'none', animation: p4Step >= 20 ? 'slideUp 1s cubic-bezier(0.22, 1, 0.36, 1) forwards' : 'slideDown 1s cubic-bezier(0.22, 1, 0.36, 1) forwards', overflow: 'hidden' }}>
                     <div style={{ animation: 'flowDown 120s linear infinite' }}>
                       {p4StripImages.concat(p4StripImages).map((src, idx) => (
                         <div key={idx} style={{ width: '300px', height: '50.333vh', backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                       ))}
                     </div>
                   </div>
-                  <div style={{ maxWidth: '700px', padding: '2.5rem', animation: 'fadeIn 2s ease', position: 'relative' }}>
+                  <div style={{ maxWidth: '700px', padding: '2.5rem', marginLeft: 250, opacity: p4Step >= 20 ? 0 : 1, transition: 'opacity 1.2s ease', position: 'relative' }}>
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', maskImage: 'radial-gradient(ellipse 60% 50% at center, black 60%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 60% 50% at center, black 60%, transparent 100%)', pointerEvents: 'none', borderRadius: '40px' }} />
                     <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(1.1rem, 2vw, 1.5rem)', lineHeight: 2, color: 'rgba(255,255,255,0.85)', fontStyle: 'italic', textAlign: 'left', position: 'relative', zIndex: 1 }}>
                       {p4NewLetter.split(' ').slice(0, p4LetterWordsVisible).join(' ')}
@@ -2052,7 +2083,7 @@ export default function App() {
                     {p4LetterWordsVisible >= p4NewLetter.split(' ').length && (
                       <div style={{ textAlign: 'center', marginTop: '2.5rem', position: 'relative', zIndex: 1 }}>
                         <span
-                          onClick={() => setP4Step(21)}
+                          onClick={() => setP4Step(20)}
                           style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontWeight: 500, fontSize: '1rem', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', letterSpacing: '0.05em', paddingBottom: '2px', transition: 'color 0.3s ease' }}
                           onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
                           onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
@@ -2062,33 +2093,35 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                </>
+                </div>
               )}
             </div>
           )}
 
-          {/* PAGE 4: Sentences overlay */}
+          {/* PAGE 4: Sentences overlay (Phase C) */}
           {showPage4 && p4Step >= 21 && p4Step <= 26 && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 51, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', inset: 0, zIndex: 51, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 1.2s ease' }}>
               {p4Sentences.map((s, i) => (
                 <div key={i} style={{ position: 'absolute', fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.5rem, 2.8vw, 2.2rem)', color: 'rgba(255,255,255,0.9)', textAlign: 'center', opacity: p4Step - 21 === i ? 1 : 0, transition: 'opacity 0.8s ease', pointerEvents: 'none' }}>{s}</div>
               ))}
             </div>
           )}
 
-          {/* PAGE 4: Typewriter overlay (fades to black at step 28, exits at step 29) */}
-          {showPage4 && p4Step >= 27 && p4Step <= 28 && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 52, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: p4Step === 28 ? 0 : 1, transition: 'opacity 2s ease' }}>
-              <div style={{ maxWidth: '750px', padding: '2rem', fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(1rem, 1.8vw, 1.3rem)', lineHeight: 1.9, color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontStyle: 'italic' }}>
+          {/* PAGE 4: Typewriter overlay (Phase D) */}
+          {showPage4 && p4Step >= 27 && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 52, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ maxWidth: '750px', padding: '2rem', fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(1rem, 1.8vw, 1.3rem)', lineHeight: 1.9, color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontStyle: 'italic', opacity: p4Step === 28 ? 0 : 1, transition: 'opacity 1.5s ease' }}>
                 {p4TypewriterText.slice(0, p4TypewriterChars)}
                 {p4TypewriterChars < p4TypewriterText.length && <span style={{ animation: 'blink 1s step-end infinite' }}>|</span>}
               </div>
             </div>
           )}
+
         </div>
       )}
 
       {amourRevealed && <div style={{ display: showLockPage || showBgPage ? 'none' : undefined }}><MusicPlayer externalPauseTrigger={bgMusicPauseTrigger} externalResumeTrigger={bgMusicResumeTrigger} /></div>}
+
     </>
   );
 }

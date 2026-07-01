@@ -210,6 +210,16 @@ body {
   100% { transform: translateY(0); }
 }
 
+@keyframes slideUp {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 @keyframes flowDown {
   0% { transform: translateY(-1006.66vh); }
   100% { transform: translateY(0); }
