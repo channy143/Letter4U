@@ -71,6 +71,7 @@ export default function App() {
     { title: 'Tibok', artist: 'Earl Agustin', image: '/moments/16.jpg', audio: '/music/tibok.mp3', gif: '/moments/cat7.gif' },
     { title: 'Palagi', artist: 'Syd Hartha', image: '/moments/11.jpg', audio: '/music/palagi.mp3', gif: '/moments/cat12.gif' },
     { title: 'Ikaw at Ako', artist: 'Moira Dela Torre', image: '/moments/13.jpg', audio: '/music/ikawatako.mp3', gif: '/moments/cat13.gif' },
+    { title: 'Her', artist: 'Unknown', image: '/moments/her.png', audio: '/music/her.mp3', gif: '/moments/her.png' },
   ];
 
   const letterContent = [
@@ -79,6 +80,7 @@ export default function App() {
     { emoji: '\u2764\uFE0F', subtitle: 'The feeling.', body: "This one reminds me of those moments when I catch myself smiling because of you. No big reason\u2014just you." },
     { emoji: '\uD83C\uDF3C', subtitle: 'The constant.', body: "This song reminds me that some people naturally become part of your everyday thoughts. You're one of those people for me." },
     { emoji: '\uD83C\uDF19', subtitle: 'The hope.', body: "Not because we're already there, but because it reminds me of the kind of future I'd love to build\u2014with patience, trust, and genuine care." },
+    { emoji: '\uD83C\uDF3C', subtitle: 'The quiet one.', body: "This song reminds me how someone can quietly become special. I don't have all the answers about where our story will go, but I'm grateful that you're part of it." },
   ];
 
   const p4QA = [
@@ -1376,7 +1378,7 @@ export default function App() {
                 muted
                 playsInline
                 preload="auto"
-                src={['/video/pasilyo.mp4', '/video/glue.mp4', '/video/tibok.mp4', '/video/palagi.mp4', '/video/ikawatako.mp4'][currentSongIndex]}
+                src={['/video/pasilyo.mp4', '/video/glue.mp4', '/video/tibok.mp4', '/video/palagi.mp4', '/video/ikawatako.mp4', '/video/her.mp4'][currentSongIndex]}
                 onCanPlay={() => setVideoLoaded(true)}
                 style={{
                   position: 'absolute',
