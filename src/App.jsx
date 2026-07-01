@@ -350,8 +350,35 @@ export default function App() {
     return () => clearTimeout(t);
   }, [amourRevealed]);
 
+  const videoSources = ['/video/pasilyo.mp4', '/video/glue.mp4', '/video/tibok.mp4', '/video/palagi.mp4', '/video/ikawatako.mp4'];
+
+  // Preload first video immediately on mount, cache for later song plays
+  useEffect(() => {
+    const vid = document.createElement('video');
+    vid.preload = 'auto';
+    vid.muted = true;
+    vid.src = videoSources[0];
+    vid.style.cssText = 'position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0.01;pointer-events:none';
+    vid.load();
+    document.body.appendChild(vid);
+    return () => { if (vid.parentNode) vid.parentNode.removeChild(vid); };
+  }, []);
+
   useEffect(() => {
     setVideoLoaded(false);
+  }, [currentSongIndex]);
+
+  // Preload next video when song changes
+  useEffect(() => {
+    const nextIdx = currentSongIndex + 1;
+    if (nextIdx >= videoSources.length) return;
+    const vid = document.createElement('video');
+    vid.preload = 'auto';
+    vid.muted = true;
+    vid.src = videoSources[nextIdx];
+    vid.style.cssText = 'position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0.01;pointer-events:none';
+    vid.load();
+    document.body.appendChild(vid);
   }, [currentSongIndex]);
 
   useEffect(() => {
@@ -1379,7 +1406,7 @@ export default function App() {
                 muted
                 playsInline
                 preload="auto"
-                src={['/video/pasilyo.mp4', '/video/glue.mp4', '/video/tibok.mp4', '/video/palagi.mp4', '/video/ikawatako.mp4'][currentSongIndex]}
+                src={videoSources[currentSongIndex]}
                 onCanPlay={() => setVideoLoaded(true)}
                 style={{
                   position: 'absolute',
