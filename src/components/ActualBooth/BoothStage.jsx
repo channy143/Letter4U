@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 export default function BoothStage({
+  isCreator,
   roomId,
   localStream,
   remoteStream,
@@ -92,13 +93,6 @@ export default function BoothStage({
     onRetakeMyPhoto();
   }
 
-  function getCurrentStagePhoto() {
-    if (stripPhotos.length > stageIndex) {
-      return stripPhotos[stageIndex];
-    }
-    return null;
-  }
-
   function handleDownload() {
     const canvas = document.createElement('canvas');
     const imgW = 200;
@@ -151,11 +145,18 @@ export default function BoothStage({
     }
   }, [stageIndex]);
 
-  const cameraDisabled = !localStream;
   const canCapture = !myPhoto && !myPhotoSubmitted && !stageComplete;
   const showCaptureBtn = canCapture && !pendingPhoto;
 
-  const myFeedFrozen = myPhoto;
+  const cameraSlots = isCreator
+    ? [
+        { key: 'you', label: 'You', stream: localStream, videoRef: localVideoRef, mirror: true, submitted: myPhotoSubmitted, photoData: myPhoto },
+        { key: 'partner', label: 'Partner', stream: remoteStream, videoRef: remoteVideoRef, mirror: false, submitted: partnerPhotoSubmitted, photoData: partnerPhoto },
+      ]
+    : [
+        { key: 'partner', label: 'Partner', stream: remoteStream, videoRef: remoteVideoRef, mirror: false, submitted: partnerPhotoSubmitted, photoData: partnerPhoto },
+        { key: 'you', label: 'You', stream: localStream, videoRef: localVideoRef, mirror: true, submitted: myPhotoSubmitted, photoData: myPhoto },
+      ];
 
   if (viewResult) {
     const allSlots = [...stripPhotos];
@@ -268,31 +269,35 @@ export default function BoothStage({
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.8rem' }}>
           {!pendingPhoto && (
             <div style={{ display: 'flex', gap: '1rem', width: '100%', maxWidth: '600px', justifyContent: 'center' }}>
-              <div style={{ flex: 1, aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', position: 'relative', background: '#1a0a08', border: '2px solid rgba(255,255,255,0.1)' }}>
-                <div style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 2, fontFamily: "'Cinzel', serif", fontSize: '0.45rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', background: 'rgba(0,0,0,0.5)', padding: '3px 8px', borderRadius: '4px' }}>You</div>
-                {myFeedFrozen ? (
-                  <img src={myPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                ) : localStream ? (
-                  <video ref={localVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: '2rem', opacity: 0.2 }}>&#x1F4F7;</span>
+              {cameraSlots.map((slot) => (
+                <div key={slot.key} style={{ flex: 1, aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', position: 'relative', background: '#1a0a08', border: '2px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 2, fontFamily: "'Cinzel', serif", fontSize: '0.45rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', background: 'rgba(0,0,0,0.5)', padding: '3px 8px', borderRadius: '4px' }}>
+                    {slot.label}
                   </div>
-                )}
-              </div>
-              <div style={{ flex: 1, aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', position: 'relative', background: '#1a0a08', border: '2px solid rgba(255,255,255,0.1)' }}>
-                <div style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 2, fontFamily: "'Cinzel', serif", fontSize: '0.45rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', background: 'rgba(0,0,0,0.5)', padding: '3px 8px', borderRadius: '4px' }}>Partner</div>
-                {partnerPhotoSubmitted ? (
-                  <img src={partnerPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                ) : remoteStream ? (
-                  <video ref={remoteVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.3rem' }}>
-                    <span style={{ fontSize: '1.5rem', opacity: 0.2 }}>&#x1F464;</span>
-                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)' }}>Awaiting video...</span>
-                  </div>
-                )}
-              </div>
+                  {slot.stream ? (
+                    <video ref={slot.videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: slot.mirror ? 'scaleX(-1)' : 'none', display: 'block' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: slot.key === 'partner' ? 'column' : 'row', gap: '0.3rem' }}>
+                      <span style={{ fontSize: slot.key === 'partner' ? '1.5rem' : '2rem', opacity: 0.2 }}>
+                        {slot.key === 'partner' ? '\u{1F464}' : '\u{1F4F7}'}
+                      </span>
+                      {slot.key === 'partner' && (
+                        <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)' }}>Awaiting video...</span>
+                      )}
+                    </div>
+                  )}
+                  {slot.submitted && slot.photoData && (
+                    <div style={{ position: 'absolute', bottom: '8px', right: '8px', zIndex: 3, width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.6)', boxShadow: '0 2px 10px rgba(0,0,0,0.4)' }}>
+                      <img src={slot.photoData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    </div>
+                  )}
+                  {slot.submitted && slot.photoData && (
+                    <div style={{ position: 'absolute', bottom: '8px', right: '8px', zIndex: 4, width: '16px', height: '16px', borderRadius: '50%', background: '#4caf50', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '0.45rem', color: '#fff', fontWeight: 700 }}>&#10003;</span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 

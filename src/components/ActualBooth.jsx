@@ -424,6 +424,7 @@ export default function ActualBooth({ onClose }) {
 
       {phase === 'lobby' && (
         <BoothStage
+          isCreator={isCreator}
           roomId={roomId}
           localStream={localStream}
           remoteStream={remoteStream}
