@@ -335,10 +335,16 @@ export default function HeartPage({ onClose }) {
           left: '50%',
           top: 'calc(50% + 195px)',
           transform: 'translateX(-50%)',
-          width: 'min(560px, 88vw)',
+          width: 'min(620px, 92vw)',
           textAlign: 'center',
           zIndex: 4,
-          minHeight: '90px',
+          minHeight: '70px',
+          padding: '2.8rem 2.4rem',
+          borderRadius: '999px',
+          background:
+            'linear-gradient(180deg, rgba(255,251,245,0.95) 0%, rgba(250,241,229,0.88) 100%)',
+          border: '1px solid rgba(180,140,90,0.16)',
+          boxShadow: '0 6px 28px rgba(155,58,74,0.08)',
           pointerEvents: 'none',
         }}
       >
