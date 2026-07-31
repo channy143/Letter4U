@@ -39,10 +39,14 @@ export default function HeartPage({ onClose }) {
     [-200 * K, 135 * K],
     [200 * K, 135 * K],
   ];
-  const circlePos = ([-90, -30, -150, 30, 150, 90]).map((a) => {
+  const circleAngles = [-90, -30, -150, 30, 150, 90];
+  const circlePos = circleAngles.map((a) => {
     const rad = (a * Math.PI) / 180;
     return [Math.cos(rad) * R, Math.sin(rad) * R];
   });
+  const circleRot = circleAngles.map((a) =>
+    Math.sin((a * Math.PI) / 180) < 0 ? a + 90 : a - 90
+  );
 
   useEffect(() => {
     const a = audioRef.current;
@@ -70,21 +74,21 @@ export default function HeartPage({ onClose }) {
       setTimeout(() => {
         setColliding(true);
         setBurst(
-          Array.from({ length: 30 }, (_, i) => ({
+          Array.from({ length: 120 }, (_, i) => ({
             id: i,
-            dx: (Math.random() - 0.5) * 520,
-            dy: (Math.random() - 0.5) * 520,
+            dx: `${(Math.random() - 0.5) * 92}vw`,
+            dy: `${(Math.random() - 0.5) * 92}vh`,
             dr: (Math.random() - 0.5) * 720,
-            size: 4 + Math.random() * 10,
+            size: 5 + Math.random() * 13,
             color: GOLD[i % GOLD.length],
-            delay: Math.random() * 0.25,
-            duration: 0.8 + Math.random() * 0.6,
+            delay: Math.random() * 0.3,
+            duration: 0.9 + Math.random() * 0.7,
             round: Math.random() > 0.35,
           }))
         );
       }, seqStart + 10200)
     );
-    t.push(setTimeout(() => { setActiveSentence(4); setCalm(true); }, seqStart + 11800));
+    t.push(setTimeout(() => { setActiveSentence(4); setCalm(true); }, seqStart + 12200));
     return () => t.forEach(clearTimeout);
   }, []);
 
@@ -207,7 +211,7 @@ export default function HeartPage({ onClose }) {
           const target = colliding
             ? 'translate(0px, 0px) translate(-50%, -50%) scale(0.15)'
             : orbiting
-              ? `translate(${circlePos[i][0]}px, ${circlePos[i][1]}px) translate(-50%, -50%)`
+              ? `translate(${circlePos[i][0]}px, ${circlePos[i][1]}px) translate(-50%, -50%) rotate(${circleRot[i]}deg)`
               : `translate(${fixedPos[i][0]}px, ${fixedPos[i][1]}px) translate(-50%, -50%)`;
           return (
             <div
@@ -225,13 +229,21 @@ export default function HeartPage({ onClose }) {
             >
               <div
                 style={{
-                  width: '180px',
-                  textAlign: 'center',
-                  opacity: revealedCount > i ? 1 : 0,
-                  transform: revealedCount > i ? 'translateY(0)' : 'translateY(14px)',
-                  transition: 'opacity 0.8s ease, transform 0.8s cubic-bezier(0.25, 1, 0.4, 1)',
+                  animation: rotating
+                    ? 'counterSpin 5s cubic-bezier(0.4, 0, 0.9, 0.6) forwards'
+                    : 'none',
                 }}
               >
+                <div
+                  style={{
+                    width: '180px',
+                    textAlign: 'center',
+                    opacity: revealedCount > i ? 1 : 0,
+                    transform: revealedCount > i ? 'translateY(0)' : 'translateY(14px)',
+                    transition:
+                      'opacity 0.8s ease, transform 0.8s cubic-bezier(0.25, 1, 0.4, 1)',
+                  }}
+                >
                 <div
                   style={{
                     fontFamily: "'Cormorant Garamond', serif",
@@ -245,6 +257,7 @@ export default function HeartPage({ onClose }) {
                   {msg}
                 </div>
               </div>
+              </div>
             </div>
           );
         })}
@@ -255,17 +268,11 @@ export default function HeartPage({ onClose }) {
           <div
             style={{
               position: 'absolute',
-              left: '50%',
-              top: '50%',
-              width: '440px',
-              height: '440px',
-              marginLeft: '-220px',
-              marginTop: '-220px',
-              zIndex: 6,
-              borderRadius: '50%',
+              inset: 0,
+              zIndex: 9,
               background:
-                'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,236,180,0.55) 40%, rgba(255,220,120,0) 70%)',
-              animation: 'collisionFlash 1s ease-out both',
+                'radial-gradient(circle at center, #ffffff 0%, #fffdf7 55%, #fdf4e4 100%)',
+              animation: 'whiteout 2.6s ease both',
               pointerEvents: 'none',
             }}
           />
@@ -274,15 +281,15 @@ export default function HeartPage({ onClose }) {
               position: 'absolute',
               left: '50%',
               top: '50%',
-              width: '380px',
-              height: '380px',
-              marginLeft: '-190px',
-              marginTop: '-190px',
-              zIndex: 5,
+              width: '120vmin',
+              height: '120vmin',
+              marginLeft: '-60vmin',
+              marginTop: '-60vmin',
+              zIndex: 9,
               borderRadius: '50%',
               background:
-                'radial-gradient(circle, rgba(255,240,190,0.7) 0%, rgba(240,180,60,0.25) 50%, rgba(240,180,60,0) 75%)',
-              animation: 'collisionBloom 1.4s ease-out both',
+                'radial-gradient(circle, rgba(255,245,210,0.85) 0%, rgba(240,180,60,0.25) 55%, rgba(240,180,60,0) 78%)',
+              animation: 'collisionBloom 1.8s ease-out both',
               pointerEvents: 'none',
             }}
           />
@@ -291,15 +298,15 @@ export default function HeartPage({ onClose }) {
               position: 'absolute',
               left: '50%',
               top: '50%',
-              width: '80px',
-              height: '80px',
-              marginLeft: '-40px',
-              marginTop: '-40px',
-              zIndex: 5,
+              width: '220vmax',
+              height: '220vmax',
+              marginLeft: '-110vmax',
+              marginTop: '-110vmax',
+              zIndex: 9,
               borderRadius: '50%',
-              border: '3px solid rgba(255,225,140,0.9)',
-              boxShadow: '0 0 24px rgba(255,215,110,0.8)',
-              animation: 'shockwave 1.1s cubic-bezier(0.2, 0.6, 0.4, 1) both',
+              border: '4px solid rgba(255,235,170,0.95)',
+              boxShadow: '0 0 60px rgba(255,225,140,0.9)',
+              animation: 'shockwaveFull 2s cubic-bezier(0.2, 0.6, 0.4, 1) both',
               pointerEvents: 'none',
             }}
           />
@@ -315,10 +322,10 @@ export default function HeartPage({ onClose }) {
                 background: p.color,
                 borderRadius: p.round ? '50%' : '2px',
                 boxShadow: '0 0 10px rgba(255,220,120,0.9)',
-                zIndex: 6,
+                zIndex: 9,
                 animation: `confettiBurst ${p.duration}s ${p.delay}s ease-out both`,
-                '--dx': `${p.dx}px`,
-                '--dy': `${p.dy}px`,
+                '--dx': p.dx,
+                '--dy': p.dy,
                 '--dr': `${p.dr}deg`,
               }}
             />
