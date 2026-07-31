@@ -39,9 +39,9 @@ export default function HeartPage({ onClose }) {
     [-200 * K, 135 * K],
     [200 * K, 135 * K],
   ];
-  const circlePos = Array.from({ length: 6 }, (_, i) => {
-    const a = ((-90 + i * 60) * Math.PI) / 180;
-    return [Math.cos(a) * R, Math.sin(a) * R];
+  const circlePos = ([-90, -30, -150, 30, 150, 90]).map((a) => {
+    const rad = (a * Math.PI) / 180;
+    return [Math.cos(rad) * R, Math.sin(rad) * R];
   });
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function HeartPage({ onClose }) {
     t.push(setTimeout(() => { setOrbiting(true); setActiveSentence(1); }, seqStart));
     t.push(setTimeout(() => setActiveSentence(2), seqStart + 3800));
     t.push(setTimeout(() => setActiveSentence(3), seqStart + 7600));
-    t.push(setTimeout(() => setRotating(true), seqStart + 4800));
+    t.push(setTimeout(() => setRotating(true), seqStart + 5200));
     t.push(
       setTimeout(() => {
         setColliding(true);
@@ -82,9 +82,9 @@ export default function HeartPage({ onClose }) {
             round: Math.random() > 0.35,
           }))
         );
-      }, seqStart + 9800)
+      }, seqStart + 10200)
     );
-    t.push(setTimeout(() => { setActiveSentence(4); setCalm(true); }, seqStart + 11400));
+    t.push(setTimeout(() => { setActiveSentence(4); setCalm(true); }, seqStart + 11800));
     return () => t.forEach(clearTimeout);
   }, []);
 
@@ -166,7 +166,7 @@ export default function HeartPage({ onClose }) {
       <div
         style={{
           position: 'relative',
-          zIndex: 2,
+          zIndex: 7,
           height: '100%',
           display: 'flex',
           alignItems: 'center',
