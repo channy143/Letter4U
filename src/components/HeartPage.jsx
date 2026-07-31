@@ -338,13 +338,14 @@ export default function HeartPage({ onClose }) {
           width: 'min(620px, 92vw)',
           textAlign: 'center',
           zIndex: 4,
-          minHeight: '70px',
+          minHeight: '80px',
           padding: '2.8rem 2.4rem',
           borderRadius: '999px',
+          display: 'grid',
+          placeItems: 'center',
           background:
-            'linear-gradient(180deg, rgba(255,251,245,0.95) 0%, rgba(250,241,229,0.88) 100%)',
-          border: '1px solid rgba(180,140,90,0.16)',
-          boxShadow: '0 6px 28px rgba(155,58,74,0.08)',
+            'radial-gradient(ellipse 100% 100% at center, rgba(255,251,245,0.97) 0%, rgba(255,251,245,0.9) 55%, rgba(250,241,229,0.55) 85%, rgba(250,241,229,0) 100%)',
+          boxShadow: '0 10px 40px rgba(155,58,74,0.05)',
           pointerEvents: 'none',
         }}
       >
@@ -352,9 +353,7 @@ export default function HeartPage({ onClose }) {
           <p
             key={i}
             style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
+              gridArea: '1 / 1',
               fontFamily: "'Cormorant Garamond', serif",
               fontStyle: 'italic',
               fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)',
@@ -370,9 +369,7 @@ export default function HeartPage({ onClose }) {
         ))}
         <p
           style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
+            gridArea: '1 / 1',
             fontFamily: "'Cormorant Garamond', serif",
             fontStyle: 'italic',
             fontWeight: 500,
