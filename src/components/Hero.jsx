@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Hero({ onReadLetter, onRightArrowClick }) {
+export default function Hero({ onReadLetter, onRightArrowClick, onLeftArrowClick }) {
   return (
     <section
       style={{
@@ -76,6 +76,7 @@ export default function Hero({ onReadLetter, onRightArrowClick }) {
           }}
           onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
           onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.35'; }}
+          onClick={onLeftArrowClick}
         >
           &#10094;
         </span>

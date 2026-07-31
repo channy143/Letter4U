@@ -12,6 +12,7 @@ import WebGLBackground from './components/WebGLBackground';
 import FlowersFall from './components/FlowersFall';
 import PhotoBooth from './components/PhotoBooth';
 import ActualBooth from './components/ActualBooth';
+import HeartPage from './components/HeartPage';
 
 export default function App() {
   const [zoomDone, setZoomDone] = useState(false);
@@ -58,6 +59,8 @@ export default function App() {
   const [photoBoothSliding, setPhotoBoothSliding] = useState(false);
   const [photoBoothRevealed, setPhotoBoothRevealed] = useState(false);
   const [showActualBooth, setShowActualBooth] = useState(false);
+  const [showHeartPage, setShowHeartPage] = useState(false);
+  const [heartSliding, setHeartSliding] = useState(false);
   const p4StripImages = [
     '/moments/1.jpg', '/moments/2.jpg', '/moments/3.jpg', '/moments/4.jpg',
     '/moments/5.jpg', '/moments/6.png', '/moments/7.jpg', '/moments/8.jpg',
@@ -427,6 +430,20 @@ export default function App() {
     setTimeout(() => setPhotoBoothRevealed(true), 2500);
   }
 
+  function handleHeartPageOpen() {
+    setBgMusicPauseTrigger(t => t + 1);
+    setHeartSliding(true);
+    setTimeout(() => {
+      setShowHeartPage(true);
+      setHeartSliding(false);
+    }, 700);
+  }
+
+  function handleHeartPageClose() {
+    setShowHeartPage(false);
+    setBgMusicResumeTrigger(t => t + 1);
+  }
+
   function togglePasilyo() {
     const a = pasilyoRef.current;
     if (!a) return;
@@ -472,6 +489,9 @@ export default function App() {
   const musicTop = 3 * vh;
   const flippedCount = stickyFlipped.filter(Boolean).length;
   const musicEntryP = Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen));
+  const mainSliding = photoBoothSliding || heartSliding;
+  const mainTransform = photoBoothSliding ? 'translateX(-100%)' : heartSliding ? 'translateX(100%)' : 'translateX(0)';
+  const mainHidden = (showLockPage || showBgPage || showPhotoBooth || showHeartPage) && !mainSliding;
 
   return (
     <>
@@ -562,7 +582,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ transition: 'opacity 0.6s ease', opacity: photoBoothSliding ? 0 : 1, pointerEvents: photoBoothSliding ? 'none' : undefined }}>
+      <div style={{ transition: 'opacity 0.6s ease', opacity: mainSliding ? 0 : 1, pointerEvents: mainSliding ? 'none' : undefined }}>
         <PetalCanvas />
       </div>
       <div
@@ -573,12 +593,12 @@ export default function App() {
           opacity: 0,
           pointerEvents: 'none',
           transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease',
-          display: (showLockPage || showBgPage || showPhotoBooth) && !photoBoothSliding ? 'none' : undefined,
-          transform: photoBoothSliding ? 'translateX(-100%)' : 'translateX(0)',
+          display: mainHidden ? 'none' : undefined,
+          transform: mainTransform,
         }}
       >
           <Navbar onLetterClick={handleReadLetter} />
-          <Hero onReadLetter={handleReadLetter} onRightArrowClick={handlePhotoBoothOpen} />
+          <Hero onReadLetter={handleReadLetter} onRightArrowClick={handlePhotoBoothOpen} onLeftArrowClick={handleHeartPageOpen} />
           {showModal && <LetterModal onClose={handleCloseModal} />}
           <QuotesSection />
           <MomentsSection onLockClick={() => setShowLockPage(true)} />
@@ -2132,9 +2152,9 @@ export default function App() {
       {amourRevealed && (
         <div style={{
           transition: 'opacity 0.6s ease',
-          opacity: photoBoothSliding ? 0 : 1,
-          display: showLockPage || showBgPage || showPhotoBooth ? 'none' : undefined,
-          pointerEvents: photoBoothSliding ? 'none' : undefined,
+          opacity: mainSliding ? 0 : 1,
+          display: mainHidden ? 'none' : undefined,
+          pointerEvents: mainSliding ? 'none' : undefined,
         }}>
           <MusicPlayer externalPauseTrigger={bgMusicPauseTrigger} externalResumeTrigger={bgMusicResumeTrigger} />
         </div>
@@ -2152,6 +2172,8 @@ export default function App() {
       {showActualBooth && (
         <ActualBooth onClose={() => setShowActualBooth(false)} />
       )}
+
+      {showHeartPage && <HeartPage onClose={handleHeartPageClose} />}
 
       {exitOverlay && <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', animation: 'fadeOut 1.5s ease forwards', pointerEvents: 'none' }} />}
     </>
