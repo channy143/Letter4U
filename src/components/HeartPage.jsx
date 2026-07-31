@@ -335,17 +335,16 @@ export default function HeartPage({ onClose }) {
           left: '50%',
           top: 'calc(50% + 195px)',
           transform: 'translateX(-50%)',
-          width: 'min(620px, 92vw)',
+          width: 'min(480px, 90vw)',
           textAlign: 'center',
           zIndex: 4,
-          minHeight: '80px',
-          padding: '2.8rem 2.4rem',
+          minHeight: '56px',
+          padding: '1.7rem 1.5rem',
           borderRadius: '999px',
           display: 'grid',
           placeItems: 'center',
           background:
-            'radial-gradient(ellipse 100% 100% at center, rgba(255,251,245,0.97) 0%, rgba(255,251,245,0.9) 55%, rgba(250,241,229,0.55) 85%, rgba(250,241,229,0) 100%)',
-          boxShadow: '0 10px 40px rgba(155,58,74,0.05)',
+            'radial-gradient(ellipse 100% 100% at center, rgba(255,251,245,0.96) 0%, rgba(255,251,245,0.85) 35%, rgba(250,241,229,0.5) 60%, rgba(250,241,229,0) 80%)',
           pointerEvents: 'none',
         }}
       >
