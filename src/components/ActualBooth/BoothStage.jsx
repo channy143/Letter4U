@@ -41,12 +41,27 @@ export default function BoothStage({
       video.play().catch(() => {});
       setTimeout(() => {
         try {
+          const W = 640;
+          const H = 480;
           const canvas = document.createElement('canvas');
-          canvas.width = 640;
-          canvas.height = 480;
+          canvas.width = W;
+          canvas.height = H;
           const ctx = canvas.getContext('2d');
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+          let sx = 0;
+          let sy = 0;
+          let sw = vw;
+          let sh = vh;
+          if (vw && vh) {
+            const scale = Math.max(W / vw, H / vh);
+            sw = W / scale;
+            sh = H / scale;
+            sx = (vw - sw) / 2;
+            sy = (vh - sh) / 2;
+          }
           ctx.scale(-1, 1);
-          ctx.drawImage(video, -640, 0, 640, 480);
+          ctx.drawImage(video, sx, sy, sw, sh, -W, 0, W, H);
           onTakePhoto(canvas.toDataURL('image/jpeg', 0.85));
         } finally {
           video.pause();
