@@ -29,6 +29,45 @@ function generateRoomId() {
   return result;
 }
 
+function emptySlot() {
+  return { preview: null, confirmed: false };
+}
+
+function createRoomState() {
+  return {
+    round: 1,
+    status: 'active',
+    creator: emptySlot(),
+    joiner: emptySlot(),
+    strip: [],
+  };
+}
+
+function getSlot(room, socketId) {
+  if (!room || room.participants.length === 0) return null;
+  return room.participants[0].id === socketId
+    ? room.roomState.creator
+    : room.roomState.joiner;
+}
+
+function broadcastRoomState(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  io.to(roomId).emit('room_state', room.roomState);
+}
+
+function advanceRound(room) {
+  const s = room.roomState;
+  if (s.status !== 'active' || s.round > 3) return;
+  if (!s.creator.confirmed || !s.joiner.confirmed) return;
+  s.strip.push({ creator: s.creator.preview, joiner: s.joiner.preview });
+  s.creator = emptySlot();
+  s.joiner = emptySlot();
+  s.round += 1;
+  if (s.round > 3) s.status = 'complete';
+  broadcastRoomState(room.id);
+}
+
 io.on('connection', (socket) => {
   let currentRoomId = null;
 
@@ -37,12 +76,13 @@ io.on('connection', (socket) => {
     const room = {
       id: roomId,
       participants: [{ id: socket.id }],
-      stageData: [{}, {}, {}],
+      roomState: createRoomState(),
     };
     rooms.set(roomId, room);
     socket.join(roomId);
     currentRoomId = roomId;
     socket.emit('room_created', { roomId, participants: room.participants });
+    socket.emit('room_state', room.roomState);
   });
 
   socket.on('join_room', ({ roomId }) => {
@@ -59,6 +99,7 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     currentRoomId = roomId;
     socket.emit('room_joined', { roomId, participants: room.participants });
+    socket.emit('room_state', room.roomState);
     io.to(roomId).emit('participant_joined', { participants: room.participants });
   });
 
@@ -70,34 +111,34 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('photos_started');
   });
 
-  socket.on('submit_photo', ({ roomId, photo, stageIndex }) => {
+  socket.on('set_preview', ({ roomId, preview }) => {
     const room = rooms.get(roomId);
     if (!room) return;
-    room.stageData[stageIndex][socket.id] = { photo, approved: false };
-    socket.to(roomId).emit('partner_submitted_photo', {
-      photo,
-      stageIndex,
-      from: socket.id,
-    });
+    const slot = getSlot(room, socket.id);
+    if (!slot) return;
+    slot.preview = preview;
+    slot.confirmed = false;
+    broadcastRoomState(roomId);
   });
 
-  socket.on('approve_photo', ({ roomId, stageIndex }) => {
+  socket.on('retake_photo', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
-    const stage = room.stageData[stageIndex];
-    const otherUser = room.participants.find((p) => p.id !== socket.id);
-    if (otherUser && stage[otherUser.id]) {
-      stage[otherUser.id].approved = true;
-    }
-    socket.to(roomId).emit('partner_approved', { stageIndex });
+    const slot = getSlot(room, socket.id);
+    if (!slot) return;
+    slot.preview = null;
+    slot.confirmed = false;
+    broadcastRoomState(roomId);
   });
 
-  socket.on('request_retake', ({ roomId, stageIndex }) => {
-    socket.to(roomId).emit('partner_requested_retake', { stageIndex });
-  });
-
-  socket.on('next_stage', ({ roomId }) => {
-    io.to(roomId).emit('advance_stage');
+  socket.on('check_photo', ({ roomId }) => {
+    const room = rooms.get(roomId);
+    if (!room) return;
+    const slot = getSlot(room, socket.id);
+    if (!slot || !slot.preview) return;
+    slot.confirmed = true;
+    broadcastRoomState(roomId);
+    setTimeout(() => advanceRound(room), 1600);
   });
 
   socket.on('disconnect', () => {
@@ -106,10 +147,14 @@ io.on('connection', (socket) => {
       if (room) {
         const idx = room.participants.findIndex((p) => p.id === socket.id);
         if (idx !== -1) {
+          const slot = idx === 0 ? room.roomState.creator : room.roomState.joiner;
           room.participants.splice(idx, 1);
           if (room.participants.length === 0) {
             rooms.delete(currentRoomId);
           } else {
+            slot.preview = null;
+            slot.confirmed = false;
+            broadcastRoomState(currentRoomId);
             io.to(currentRoomId).emit('participant_disconnected', {
               userId: socket.id,
             });

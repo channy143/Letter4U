@@ -6,6 +6,14 @@ import BoothStage from './ActualBooth/BoothStage';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'https://letter4u-production.up.railway.app';
 
+const initialRoomState = {
+  round: 1,
+  status: 'active',
+  creator: { preview: null, confirmed: false },
+  joiner: { preview: null, confirmed: false },
+  strip: [],
+};
+
 export default function ActualBooth({ onClose }) {
   const [phase, setPhase] = useState('setup');
   const [roomId, setRoomId] = useState(null);
@@ -17,45 +25,14 @@ export default function ActualBooth({ onClose }) {
   const [showRoomCode, setShowRoomCode] = useState(false);
   const [partnerJoined, setPartnerJoined] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
-
-  const [mySocketId, setMySocketId] = useState(null);
-  const [partnerSocketId, setPartnerSocketId] = useState(null);
-
-  const [stageIndex, setStageIndex] = useState(0);
-
-  const [myPhoto, setMyPhoto] = useState(null);
-  const [myPhotoSubmitted, setMyPhotoSubmitted] = useState(false);
-  const [myPhotoApproved, setMyPhotoApproved] = useState(false);
-
-  const [partnerPhoto, setPartnerPhoto] = useState(null);
-  const [partnerPhotoSubmitted, setPartnerPhotoSubmitted] = useState(false);
-  const [partnerPhotoApproved, setPartnerPhotoApproved] = useState(false);
-
-  const [stripPhotos, setStripPhotos] = useState([]);
+  const [roomState, setRoomState] = useState(initialRoomState);
 
   const socketRef = useRef(null);
   const peerRef = useRef(null);
   const streamRef = useRef(null);
   const roomIdRef = useRef(null);
-  const stageIndexRef = useRef(0);
-  const advanceGuardRef = useRef(false);
-  const myPhotoRef = useRef(null);
-  const partnerPhotoRef = useRef(null);
 
   useEffect(() => { roomIdRef.current = roomId; }, [roomId]);
-  useEffect(() => { stageIndexRef.current = stageIndex; }, [stageIndex]);
-  useEffect(() => { myPhotoRef.current = myPhoto; }, [myPhoto]);
-  useEffect(() => { partnerPhotoRef.current = partnerPhoto; }, [partnerPhoto]);
-  useEffect(() => { advanceGuardRef.current = false; }, [stageIndex]);
-
-  const resetStageState = useCallback(() => {
-    setMyPhoto(null);
-    setMyPhotoSubmitted(false);
-    setMyPhotoApproved(false);
-    setPartnerPhoto(null);
-    setPartnerPhotoSubmitted(false);
-    setPartnerPhotoApproved(false);
-  }, []);
 
   const startCamera = useCallback(async () => {
     try {
@@ -77,7 +54,6 @@ export default function ActualBooth({ onClose }) {
         setRoomId(rid);
         roomIdRef.current = rid;
         setIsCreator(true);
-        setMySocketId(socket.id);
         setParticipants(parts.map((p) => (p.id === socket.id ? { ...p, id: 'me' } : p)));
         setShowRoomCode(true);
         startCamera();
@@ -87,24 +63,25 @@ export default function ActualBooth({ onClose }) {
         setRoomId(rid);
         roomIdRef.current = rid;
         setIsCreator(false);
-        setMySocketId(socket.id);
         setParticipants(parts.map((p) => (p.id === socket.id ? { ...p, id: 'me' } : p)));
         setShowRoomCode(true);
         startCamera();
+      },
+
+      room_state: (state) => {
+        setRoomState(state);
       },
 
       participant_joined: ({ participants: parts }) => {
         setParticipants(parts.map((p) => (p.id === socket.id ? { ...p, id: 'me' } : p)));
         if (parts.length === 2) {
           setPartnerJoined(true);
-          const partner = parts.find((p) => p.id !== socket.id);
-          if (partner) setPartnerSocketId(partner.id);
         }
       },
 
       signal: ({ from, signal }) => {
         if (!peerRef.current) {
-          const p = new Peer({ initiator: false, trickle: false });
+          const p = new Peer({ initiator: false, trickle: false, stream: streamRef.current });
           peerRef.current = p;
           p.on('signal', (sig) => {
             socket.emit('signal', { to: from, signal: sig });
@@ -131,35 +108,6 @@ export default function ActualBooth({ onClose }) {
 
       photos_started: () => {
         setPhase('lobby');
-      },
-
-      partner_submitted_photo: ({ photo, stageIndex: si, from }) => {
-        if (si !== stageIndexRef.current) return;
-        setPartnerPhoto(photo);
-        setPartnerPhotoSubmitted(true);
-        setPartnerSocketId(from);
-      },
-
-      partner_approved: ({ stageIndex: si }) => {
-        if (si !== stageIndexRef.current) return;
-        setMyPhotoApproved(true);
-      },
-
-      partner_requested_retake: ({ stageIndex: si }) => {
-        if (si !== stageIndexRef.current) return;
-        setMyPhoto(null);
-        setMyPhotoSubmitted(false);
-      },
-
-      advance_stage: () => {
-        if (advanceGuardRef.current) return;
-        advanceGuardRef.current = true;
-        setStripPhotos((prev) => [
-          ...prev,
-          { me: myPhotoRef.current, partner: partnerPhotoRef.current },
-        ]);
-        setStageIndex((s) => s + 1);
-        resetStageState();
       },
     };
 
@@ -220,11 +168,10 @@ export default function ActualBooth({ onClose }) {
   }, []);
 
   useEffect(() => {
-    if (participants.length === 2 && localStream && !peerRef.current) {
+    if (participants.length === 2 && localStream && !peerRef.current && isCreator) {
       const partner = participants.find((p) => p.id !== 'me');
       if (!partner) return;
       const partnerId = partner.id;
-      setPartnerSocketId(partnerId);
 
       const p = new Peer({ initiator: true, trickle: false, stream: localStream });
       peerRef.current = p;
@@ -235,7 +182,14 @@ export default function ActualBooth({ onClose }) {
       p.on('stream', (s) => setRemoteStream(s));
       p.on('error', () => {});
     }
-  }, [participants.length, localStream]);
+  }, [participants.length, localStream, isCreator]);
+
+  useEffect(() => {
+    if (!localStream || !peerRef.current) return;
+    try {
+      peerRef.current.addStream(localStream);
+    } catch {}
+  }, [localStream]);
 
   function createRoom() {
     setError(null);
@@ -272,57 +226,34 @@ export default function ActualBooth({ onClose }) {
     setPhase('lobby');
   }
 
-  function handleCaptureMyPhoto(photoData) {
-    setMyPhoto(photoData);
-  }
-
-  function handleSubmitMyPhoto() {
-    if (!myPhoto || !roomIdRef.current) return;
-    setMyPhotoSubmitted(true);
-    socketRef.current?.emit('submit_photo', {
-      roomId: roomIdRef.current,
-      photo: myPhoto,
-      stageIndex: stageIndexRef.current,
+  function applyMySlot(updater) {
+    setRoomState((prev) => {
+      if (isCreator) {
+        return { ...prev, creator: { ...updater(prev.creator) } };
+      }
+      return { ...prev, joiner: { ...updater(prev.joiner) } };
     });
   }
 
-  function handleRetakeMyPhoto() {
-    setMyPhoto(null);
-    setMyPhotoSubmitted(false);
+  function handleTakePhoto(photoData) {
+    if (!roomIdRef.current) return;
+    applyMySlot((slot) => ({ ...slot, preview: photoData, confirmed: false }));
+    socketRef.current?.emit('set_preview', { roomId: roomIdRef.current, preview: photoData });
   }
 
-  function handleApprovePartnerPhoto() {
-    setPartnerPhotoApproved(true);
-    socketRef.current?.emit('approve_photo', {
-      roomId: roomIdRef.current,
-      stageIndex: stageIndexRef.current,
-    });
+  function handleRetakePhoto() {
+    if (!roomIdRef.current) return;
+    applyMySlot(() => ({ preview: null, confirmed: false }));
+    socketRef.current?.emit('retake_photo', { roomId: roomIdRef.current });
   }
 
-  function handleRequestPartnerRetake() {
-    setPartnerPhoto(null);
-    setPartnerPhotoSubmitted(false);
-    socketRef.current?.emit('request_retake', {
-      roomId: roomIdRef.current,
-      stageIndex: stageIndexRef.current,
-    });
+  function handleCheckPhoto() {
+    if (!roomIdRef.current) return;
+    const mySlot = isCreator ? roomState.creator : roomState.joiner;
+    if (!mySlot.preview || mySlot.confirmed) return;
+    applyMySlot((slot) => ({ ...slot, confirmed: true }));
+    socketRef.current?.emit('check_photo', { roomId: roomIdRef.current });
   }
-
-  function handleNextStage() {
-    if (advanceGuardRef.current) return;
-    advanceGuardRef.current = true;
-    setStripPhotos((prev) => [
-      ...prev,
-      { me: myPhotoRef.current, partner: partnerPhotoRef.current },
-    ]);
-    setStageIndex((s) => s + 1);
-    resetStageState();
-    socketRef.current?.emit('next_stage', { roomId: roomIdRef.current });
-  }
-
-  const stageComplete =
-    myPhotoSubmitted && myPhotoApproved &&
-    partnerPhotoSubmitted && partnerPhotoApproved;
 
   return (
     <div
@@ -428,21 +359,10 @@ export default function ActualBooth({ onClose }) {
           roomId={roomId}
           localStream={localStream}
           remoteStream={remoteStream}
-          stageIndex={stageIndex}
-          myPhoto={myPhoto}
-          myPhotoSubmitted={myPhotoSubmitted}
-          myPhotoApproved={myPhotoApproved}
-          partnerPhoto={partnerPhoto}
-          partnerPhotoSubmitted={partnerPhotoSubmitted}
-          partnerPhotoApproved={partnerPhotoApproved}
-          stripPhotos={stripPhotos}
-          stageComplete={stageComplete}
-          onCaptureMyPhoto={handleCaptureMyPhoto}
-          onSubmitMyPhoto={handleSubmitMyPhoto}
-          onRetakeMyPhoto={handleRetakeMyPhoto}
-          onApprovePartnerPhoto={handleApprovePartnerPhoto}
-          onRequestPartnerRetake={handleRequestPartnerRetake}
-          onNextStage={handleNextStage}
+          roomState={roomState}
+          onTakePhoto={handleTakePhoto}
+          onRetake={handleRetakePhoto}
+          onCheck={handleCheckPhoto}
           onLeave={handleClose}
         />
       )}
