@@ -342,17 +342,20 @@ export default function HeartPage({ onClose }) {
           pointerEvents: 'none',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            inset: '-28px',
-            zIndex: -1,
-            borderRadius: '50%',
-            background:
-              'radial-gradient(ellipse at center, rgba(255,251,245,0.95) 0%, rgba(250,241,229,0.65) 55%, rgba(250,241,229,0) 72%)',
-            filter: 'blur(26px)',
-          }}
-        />
+        {activeSentence > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: '-28px',
+              zIndex: -1,
+              borderRadius: '50%',
+              background:
+                'radial-gradient(ellipse at center, rgba(255,251,245,0.95) 0%, rgba(250,241,229,0.65) 55%, rgba(250,241,229,0) 72%)',
+              filter: 'blur(26px)',
+              animation: 'fadeIn 0.8s ease',
+            }}
+          />
+        )}
         {SENTENCES.map((s, i) => (
           <p
             key={i}
