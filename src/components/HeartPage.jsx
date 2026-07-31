@@ -29,7 +29,7 @@ export default function HeartPage({ onClose }) {
   const [calm, setCalm] = useState(false);
   const [burst, setBurst] = useState([]);
 
-  const R = Math.min(240, Math.min(window.innerWidth, window.innerHeight) * 0.28);
+  const R = Math.min(300, Math.min(window.innerWidth, window.innerHeight) * 0.36);
   const K = Math.min(1, R / 240);
   const fixedPos = [
     [-200 * K, -135 * K],
