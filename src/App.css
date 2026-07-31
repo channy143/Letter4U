@@ -347,4 +347,111 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+@keyframes stringDrop {
+  0% { transform: scaleY(0); }
+  100% { transform: scaleY(1); }
+}
+
+@keyframes polaroidSwingIn {
+  0% { transform: translateY(-90px) rotate(var(--swing-from, 35deg)); opacity: 0; }
+  60% { opacity: 1; }
+  100% { transform: translateY(0) rotate(var(--rot, 0deg)); opacity: 1; }
+}
+
+@keyframes polaroidSway {
+  0% { transform: translateY(0) rotate(-1.4deg); }
+  100% { transform: translateY(-9px) rotate(1.6deg); }
+}
+
+@keyframes driftLeft {
+  0% { transform: translateX(0) rotate(var(--rot, 0deg)); }
+  100% { transform: translateX(-72vw) rotate(-15deg); opacity: 0.15; }
+}
+
+@keyframes driftRight {
+  0% { transform: translateX(0) rotate(var(--rot, 0deg)); }
+  100% { transform: translateX(72vw) rotate(15deg); opacity: 0.15; }
+}
+
+@keyframes bookRise {
+  0% { transform: translateY(118vh); }
+  72% { transform: translateY(-2.5vh); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes dustPuff {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0.95; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1.7); opacity: 0; }
+}
+
+@keyframes coverOpen {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(-104deg); }
+}
+
+@keyframes coverClose {
+  0% { transform: rotateY(-104deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+@keyframes pageFlipAway {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(-106deg); opacity: 0.9; }
+}
+
+@keyframes sheetIn {
+  0% { transform: rotateY(55deg); opacity: 0.45; }
+  100% { transform: rotateY(0deg); opacity: 1; }
+}
+
+@keyframes bookShrink {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(0.84) translateY(5vh); }
+}
+
+@keyframes itemIn {
+  0% { opacity: 0; transform: translateY(16px) scale(0.95) rotate(var(--rot, 0deg)); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(var(--rot, 0deg)); }
+}
+
+@keyframes petalSway {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(15deg) scale(1.07); }
+}
+
+@keyframes stickerWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-7deg); }
+  75% { transform: rotate(7deg); }
+}
+
+.scribble {
+  font-family: 'Caveat', cursive;
+}
+
+.flower-hover .petal {
+  transform-origin: 50% 100%;
+  transition: transform 0.5s ease;
+}
+
+.flower-hover:hover .petal {
+  animation: petalSway 0.6s ease-in-out infinite alternate;
+}
+
+.tape-lift {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tape-lift:hover {
+  transform: translateY(-8px);
+}
+
+.sticker-hover {
+  transition: transform 0.3s ease;
+}
+
+.sticker-hover:hover {
+  animation: stickerWiggle 0.5s ease-in-out infinite;
+}
+
 

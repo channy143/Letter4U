@@ -19,7 +19,7 @@ const FINAL_MESSAGE = "No matter where life takes us, I'm grateful that our path
 
 const GOLD = ['#fff7d6', '#ffe9a8', '#ffd76e', '#f5c445', '#e8a33d', '#f0b429'];
 
-export default function HeartPage({ onClose }) {
+export default function HeartPage({ onClose, onComplete }) {
   const audioRef = useRef(null);
   const [revealedCount, setRevealedCount] = useState(0);
   const [orbiting, setOrbiting] = useState(false);
@@ -89,8 +89,13 @@ export default function HeartPage({ onClose }) {
       }, seqStart + 10200)
     );
     t.push(setTimeout(() => { setActiveSentence(4); setCalm(true); }, seqStart + 12200));
+    t.push(
+      setTimeout(() => {
+        if (onComplete) onComplete();
+      }, seqStart + 20200)
+    );
     return () => t.forEach(clearTimeout);
-  }, []);
+  }, [onComplete]);
 
   return (
     <div
