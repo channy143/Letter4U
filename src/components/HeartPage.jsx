@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const MESSAGES = [
-  'Thank you for coming into my life.',
-  'You made ordinary days feel a little brighter.',
-  "I hope you always have a reason to smile.",
-  "I'm quietly cheering for you, always.",
-  "Take your time. I'll never rush you.",
-  'You deserve every good thing life has to offer.',
+  'Your laugh always finds a way to brighten my day.',
+  'Even our simplest conversations became moments I looked forward to.',
+  'I admire how hard you keep going, even on tiring days.',
+  'You have a way of making people feel comfortable just by being yourself.',
+  'Some of my favorite memories are the ordinary ones we shared.',
+  'Getting to know you has been one of the nicest parts of my year.',
 ];
 
 const SENTENCES = [
@@ -239,10 +239,7 @@ export default function HeartPage({ onClose }) {
                     fontSize: '1.05rem',
                     lineHeight: 1.5,
                     color: '#9b3a4a',
-                    background: 'rgba(253,246,237,0.75)',
-                    padding: '0.5rem 0.9rem',
-                    borderRadius: '12px',
-                    boxShadow: '0 2px 12px rgba(26,10,8,0.06)',
+                    textShadow: '0 1px 10px rgba(253,246,237,0.9)',
                   }}
                 >
                   {msg}
@@ -340,14 +337,22 @@ export default function HeartPage({ onClose }) {
           zIndex: 4,
           minHeight: '56px',
           padding: '1.7rem 1.5rem',
-          borderRadius: '999px',
           display: 'grid',
           placeItems: 'center',
-          background:
-            'radial-gradient(ellipse 100% 100% at center, rgba(255,251,245,0.96) 0%, rgba(255,251,245,0.85) 35%, rgba(250,241,229,0.5) 60%, rgba(250,241,229,0) 80%)',
           pointerEvents: 'none',
         }}
       >
+        <div
+          style={{
+            position: 'absolute',
+            inset: '-28px',
+            zIndex: -1,
+            borderRadius: '50%',
+            background:
+              'radial-gradient(ellipse at center, rgba(255,251,245,0.95) 0%, rgba(250,241,229,0.65) 55%, rgba(250,241,229,0) 72%)',
+            filter: 'blur(26px)',
+          }}
+        />
         {SENTENCES.map((s, i) => (
           <p
             key={i}
