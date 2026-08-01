@@ -5,6 +5,8 @@ import { startFinaleMusic } from '../utils/music';
 const AN = (d) => `itemIn 0.85s cubic-bezier(0.25, 1, 0.4, 1) ${d}s both`;
 const rot = (d) => ({ '--rot': `${d}deg` });
 
+let firstIntroDone = false;
+
 const PAPER =
   'linear-gradient(180deg, rgba(58,42,36,0.02), rgba(58,42,36,0.05)), repeating-linear-gradient(0deg, rgba(120,90,50,0.035) 0 1px, transparent 1px 26px), radial-gradient(circle at 30% 20%, rgba(255,255,255,0.25), transparent 55%), #f9efdc';
 
@@ -901,7 +903,16 @@ function Spread0() {
   return (
     <>
       <Page side="left" n="1">
-        <div style={{ position: 'absolute', inset: 0, animation: 'introFade 2.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            animation: firstIntroDone ? 'none' : 'introFade 2.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both',
+          }}
+          onAnimationEnd={(e) => {
+            if (e.target === e.currentTarget) firstIntroDone = true;
+          }}
+        >
           <div style={{ position: 'absolute', top: 38, left: 52, right: 52 }}>
             <span className="scribble" style={{ fontSize: '1.75rem', color: '#5a4030' }}>Hi, kikay. 🤍</span>
             <div style={{ marginTop: '0.85rem', fontFamily: "'Caveat', cursive", fontSize: '1.03rem', lineHeight: 1.42, color: '#5a4030' }}>
@@ -934,7 +945,16 @@ function Spread0() {
         </div>
       </Page>
       <Page side="right" n="2">
-        <div style={{ position: 'absolute', inset: 0, animation: 'introFade 2.8s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            animation: firstIntroDone ? 'none' : 'introFade 2.8s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both',
+          }}
+          onAnimationEnd={(e) => {
+            if (e.target === e.currentTarget) firstIntroDone = true;
+          }}
+        >
           <span className="scribble" style={{ position: 'absolute', top: 40, left: 0, right: 0, textAlign: 'center', fontSize: '1.9rem', color: '#5a4030' }}>Our First Date</span>
           <Polaroid src="/moments/1.jpg" w={300} h={305} tape tapePos={-2} style={{ top: 130, left: 56, transform: 'rotate(-3deg)' }} />
           <Note size="1.02rem" style={{ position: 'absolute', top: 452, left: 66, transform: 'rotate(-1deg)' }}>"The day 'soon' finally became today."</Note>
@@ -1028,7 +1048,7 @@ function Spread3() {
         <PaperNote rotDeg={2} style={{ top: 360, right: 140 }}>Take your time.</PaperNote>
         <PaperNote rotDeg={-3} size="1.1rem" style={{ top: 540, left: 90 }}>Rest when you need to.</PaperNote>
         <PaperNote rotDeg={1} style={{ top: 560, right: 90 }}>You deserve good things.</PaperNote>
-        <PaperNote rotDeg={-2} size="1.12rem" style={{ top: 660, left: 170 }}>Thank you for being you.</PaperNote>
+        <PaperNote rotDeg={-2} size="1.12rem" style={{ top: 630, left: 170 }}>Thank you for being you.</PaperNote>
         <PressedFlower size={44} rotDeg={-12} style={{ top: 96, left: 70 }} />
         <PressedFlower size={36} rotDeg={20} color="#c9a2a8" style={{ top: 600, right: 100 }} />
         <LeafDoodle width={30} rotDeg={35} style={{ top: 300, left: 230 }} />
@@ -1071,7 +1091,7 @@ function Spread4() {
       <Page side="left" n="9">
         <div style={{ position: 'absolute', top: 150, left: '50%', marginLeft: -205, width: 410, height: 410, transform: 'rotate(1deg)' }}>
           <img
-            src="/moments/16.jpg"
+            src="/scrapbook/3.jpg"
             alt=""
             style={{
               width: '100%',
@@ -1103,21 +1123,21 @@ function Spread4() {
         <span className="scribble" style={{ position: 'absolute', top: 46, left: 0, right: 0, textAlign: 'center', fontSize: '1.9rem', color: '#5a4030' }}>To Be Continued...</span>
         <EmptyFrame w={270} h={200} rotDeg={2} style={{ top: 130, left: '50%', marginLeft: -135 }} />
         <Note size="1.2rem" style={{ position: 'absolute', top: 372, left: 0, right: 0, textAlign: 'center' }}>Reserved for our next memory. 🤍</Note>
-        <div style={{ position: 'absolute', top: 430, left: 70, right: 70, fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.02rem', lineHeight: 1.8, color: '#5a4030', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 0.6rem' }}>I hope this won't always be the last page.</p>
-          <p style={{ margin: '0 0 0.6rem' }}>Maybe one day we'll look back at this scrapbook and realize that our favorite memories hadn't happened yet.</p>
-          <p style={{ margin: '0 0 0.6rem' }}>Until then...</p>
-          <p style={{ margin: '0 0 0.6rem' }}>thank you for every laugh, every conversation, every photo, every meal,</p>
-          <p style={{ margin: '0 0 0.6rem' }}>and every ordinary day that quietly became unforgettable.</p>
+        <div style={{ position: 'absolute', top: 400, left: 70, right: 70, fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1rem', lineHeight: 1.55, color: '#5a4030', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 0.45rem' }}>I hope this won't always be the last page.</p>
+          <p style={{ margin: '0 0 0.45rem' }}>Maybe one day we'll look back at this scrapbook and realize that our favorite memories hadn't happened yet.</p>
+          <p style={{ margin: '0 0 0.45rem' }}>Until then...</p>
+          <p style={{ margin: '0 0 0.45rem' }}>thank you for every laugh, every conversation, every photo, every meal,</p>
+          <p style={{ margin: '0 0 0.45rem' }}>and every ordinary day that quietly became unforgettable.</p>
         </div>
-        <div style={{ position: 'absolute', top: 640, left: 0, right: 0, textAlign: 'center' }}>
+        <div style={{ position: 'absolute', top: 618, left: 0, right: 0, textAlign: 'center' }}>
           <span className="scribble" style={{ fontSize: '1.12rem', color: '#5a4030', lineHeight: 1.35 }}>
             "The best stories aren't finished.
             <br />
             They're simply waiting for the next page."
           </span>
         </div>
-        <CoffeeStain size={110} style={{ top: 700, left: -20, opacity: 0.5 }} />
+        <CoffeeStain size={110} style={{ top: 690, left: -20, opacity: 0.5 }} />
         <StarDoodle size={12} style={{ top: 210, left: 60 }} />
         <HeartDoodle size={15} rotDeg={-10} style={{ top: 260, right: 80 }} />
       </Page>
@@ -1259,7 +1279,6 @@ export default function Scrapbook({ onExit }) {
   function nextPage() {
     if (flip || closing) return;
     if (spread >= SPREADS.length - 1) return;
-    playPaper();
     lastFlipRef.current = Date.now();
     setFlip({ index: spread, dir: 'forward', phase: 'start' });
   }
@@ -1267,7 +1286,6 @@ export default function Scrapbook({ onExit }) {
   function prevPage() {
     if (flip || closing) return;
     if (spread <= 0) return;
-    playPaper();
     lastFlipRef.current = Date.now();
     setFlip({ index: spread - 1, dir: 'backward', phase: 'start' });
   }
