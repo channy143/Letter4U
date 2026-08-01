@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { playPaper, playThud, playFlowerFall } from '../utils/sounds';
+import { createPortal } from 'react-dom';
+import { playPaper, playThud } from '../utils/sounds';
 import { startFinaleMusic } from '../utils/music';
 
 const AN = (d) => `itemIn 0.85s cubic-bezier(0.25, 1, 0.4, 1) ${d}s both`;
@@ -566,7 +567,7 @@ function StarDoodle({ size = 16, rotDeg = 0, color = '#8a6a48', style }) {
   );
 }
 
-function HeartDoodle({ size = 18, rotDeg = 0, color = '#c96f63', style }) {
+function HeartDoodle({ size = 18, rotDeg = 0, color = '#e8829c', style }) {
   return (
     <svg style={{ position: 'absolute', transform: `rotate(${rotDeg}deg)`, ...style }} width={size} height={size} viewBox="0 0 24 24">
       <path d="M12 19.5 C11.2 18.8, 3.5 14.4, 3.5 9 C3.5 6.1, 5.8 4.8, 7.9 4.8 C10 4.8, 12 6.5, 12 6.5 C12 6.5, 14 4.8, 16.1 4.8 C18.2 4.8, 20.5 6.1, 20.5 9 C20.5 14.4, 12.8 18.8, 12 19.5 Z" fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" />
@@ -646,7 +647,7 @@ function EmptyFrame({ w = 250, h = 190, rotDeg = 0, style }) {
   );
 }
 
-function PhotoGallery({ store, start = 0, count = 18, emptyLabel = 'Photo' }) {
+function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo' }) {
   const [items, setItems] = useState([]);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -787,15 +788,16 @@ function PhotoGallery({ store, start = 0, count = 18, emptyLabel = 'Photo' }) {
           );
         })}
       </div>
-      {busy && (
-        <div
-          style={{
-            position: 'fixed',
-            left: '50%',
-            bottom: '1.6rem',
-            transform: 'translateX(-50%)',
-            zIndex: 8900,
-            fontFamily: "'Caveat', cursive",
+      {busy &&
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              left: '50%',
+              bottom: '1.6rem',
+              transform: 'translateX(-50%)',
+              zIndex: 8900,
+              fontFamily: "'Caveat', cursive",
             fontSize: '1.05rem',
             color: '#5a4030',
             background: '#fdf7e8',
@@ -805,22 +807,24 @@ function PhotoGallery({ store, start = 0, count = 18, emptyLabel = 'Photo' }) {
           }}
         >
           tucking the photo in...
-        </div>
+        </div>,
+        document.body
       )}
-      {preview != null && items[preview] && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 8800,
-            background: 'rgba(30,18,8,0.72)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: 'fadeIn 0.25s ease',
-          }}
-          onClick={() => setPreview(null)}
-        >
+      {preview != null && items[preview] &&
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 8800,
+              background: 'rgba(30,18,8,0.72)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'fadeIn 0.25s ease',
+            }}
+            onClick={() => setPreview(null)}
+          >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
@@ -867,7 +871,8 @@ function PhotoGallery({ store, start = 0, count = 18, emptyLabel = 'Photo' }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -914,7 +919,7 @@ function Spread0() {
           }}
         >
           <div style={{ position: 'absolute', top: 38, left: 52, right: 52 }}>
-            <span className="scribble" style={{ fontSize: '1.75rem', color: '#5a4030' }}>Hi, kikay. 🤍</span>
+            <span className="scribble" style={{ fontSize: '1.75rem', color: '#5a4030' }}>Hi, kikay. 💗</span>
             <div style={{ marginTop: '0.85rem', fontFamily: "'Caveat', cursive", fontSize: '1.03rem', lineHeight: 1.42, color: '#5a4030' }}>
               <p style={{ margin: '0 0 0.55rem' }}>If you're reading this... thank you.</p>
               <p style={{ margin: '0 0 0.55rem' }}>Before closing this little website, I wanted to leave one last place where all the little memories we've made could stay together.</p>
@@ -996,12 +1001,8 @@ function Spread1() {
       </Page>
       <Page side="right" n="4">
         <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
-          <PhotoGallery store="food" start={18} emptyLabel="Food Photo" />
+          <PhotoGallery store="food" start={12} emptyLabel="Food Photo" />
         </div>
-        <PaperNote rotDeg={-3} size="1.02rem" style={{ top: 14, left: 22 }}>"This one was worth every bite."</PaperNote>
-        <PaperNote rotDeg={2} size="1.02rem" style={{ top: 30, right: 30 }}>"I'd happily eat this again."</PaperNote>
-        <PaperNote rotDeg={-2} size="0.98rem" style={{ top: 704, left: 26 }}>"The dessert disappeared too quickly."</PaperNote>
-        <PaperNote rotDeg={3} size="0.98rem" style={{ top: 716, right: 30 }}>"We definitely needed another milk tea."</PaperNote>
       </Page>
     </>
   );
@@ -1023,7 +1024,7 @@ function Spread2() {
       </Page>
       <Page side="right" n="6">
         <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
-          <PhotoGallery store="favorites" start={18} emptyLabel="Photo" />
+          <PhotoGallery store="favorites" start={12} emptyLabel="Photo" />
         </div>
         <StarDoodle size={14} rotDeg={-15} style={{ top: 12, left: 24 }} />
         <HeartDoodle size={15} rotDeg={12} style={{ top: 18, right: 26 }} />
@@ -1108,9 +1109,7 @@ function Spread4() {
         </div>
         <div style={{ position: 'absolute', top: 610, left: 0, right: 0, textAlign: 'center' }}>
           <span className="scribble" style={{ fontSize: '1.5rem', color: '#5a4030', lineHeight: 1.3 }}>
-            "My favorite page...
-            <br />
-            so far."
+            "My favorite page...so far."
           </span>
         </div>
         <TinyArrow rotDeg={0} color="#9b3a4a" style={{ top: 330, right: 30 }} />
@@ -1122,7 +1121,7 @@ function Spread4() {
       <Page side="right" n="10">
         <span className="scribble" style={{ position: 'absolute', top: 46, left: 0, right: 0, textAlign: 'center', fontSize: '1.9rem', color: '#5a4030' }}>To Be Continued...</span>
         <EmptyFrame w={270} h={200} rotDeg={2} style={{ top: 130, left: '50%', marginLeft: -135 }} />
-        <Note size="1.2rem" style={{ position: 'absolute', top: 372, left: 0, right: 0, textAlign: 'center' }}>Reserved for our next memory. 🤍</Note>
+        <Note size="1.2rem" style={{ position: 'absolute', top: 372, left: 0, right: 0, textAlign: 'center' }}>Reserved for our next memory. 💗</Note>
         <div style={{ position: 'absolute', top: 400, left: 70, right: 70, fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1rem', lineHeight: 1.55, color: '#5a4030', textAlign: 'center' }}>
           <p style={{ margin: '0 0 0.45rem' }}>I hope this won't always be the last page.</p>
           <p style={{ margin: '0 0 0.45rem' }}>Maybe one day we'll look back at this scrapbook and realize that our favorite memories hadn't happened yet.</p>
@@ -1146,31 +1145,6 @@ function Spread4() {
 }
 
 const SPREADS = [Spread0, Spread1, Spread2, Spread3, Spread4];
-
-function FlowerFall() {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: '50%',
-        top: 0,
-        width: 30,
-        height: 30,
-        zIndex: 60,
-        '--fall-end-px': 'calc(100vh - 30px)',
-        animation: 'flowerFall 2.6s cubic-bezier(0.4, 0, 0.6, 1) both',
-        pointerEvents: 'none',
-      }}
-    >
-      <svg viewBox="0 0 40 40" width="30" height="30">
-        {[0, 72, 144, 216, 288].map((a) => (
-          <ellipse key={a} cx="20" cy="12" rx="7.5" ry="11" fill="#e8b9c0" opacity="0.92" transform={`rotate(${a} 20 20)`} />
-        ))}
-        <circle cx="20" cy="20" r="5" fill="#c98d45" />
-      </svg>
-    </div>
-  );
-}
 
 export default function Scrapbook({ onExit }) {
   const [bookIn, setBookIn] = useState(false);
@@ -1224,17 +1198,6 @@ export default function Scrapbook({ onExit }) {
   }, []);
 
   useEffect(() => {
-    if (spread !== 4 || !itemsReady || closing) return;
-    const t = setTimeout(() => {
-      if (!closedRef.current) {
-        closedRef.current = true;
-        startClose();
-      }
-    }, 9000);
-    return () => clearTimeout(t);
-  }, [spread, itemsReady, closing]);
-
-  useEffect(() => {
     if (flip && flip.phase === 'start') {
       const raf = requestAnimationFrame(() => {
         setFlip((f) => (f ? { ...f, phase: 'go' } : f));
@@ -1257,8 +1220,18 @@ export default function Scrapbook({ onExit }) {
       if (Date.now() - lastFlipRef.current < 350) return;
       hintHiddenRef.current = true;
       setHintHidden(true);
-      if (e.deltaY > 0) st.nextPage();
-      else if (e.deltaY < 0) st.prevPage();
+      if (e.deltaY > 0) {
+        if (st.spread >= SPREADS.length - 1) {
+          if (!closedRef.current) {
+            closedRef.current = true;
+            startClose();
+          }
+        } else {
+          st.nextPage();
+        }
+      } else if (e.deltaY < 0) {
+        st.prevPage();
+      }
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -1268,9 +1241,6 @@ export default function Scrapbook({ onExit }) {
     setClosing(true);
     playPaper();
     setCoverState('closing');
-    setTimeout(() => {
-      playFlowerFall();
-    }, 1300);
     setTimeout(() => setBlack(true), 3000);
     setTimeout(() => setFinalText(true), 4700);
     setTimeout(() => onExit && onExit(), 11200);
@@ -1618,8 +1588,6 @@ export default function Scrapbook({ onExit }) {
         </div>
       )}
 
-      {closing && <FlowerFall />}
-
       <div
         style={{
           position: 'fixed',
@@ -1659,7 +1627,7 @@ export default function Scrapbook({ onExit }) {
             color: 'rgba(242,227,196,0.7)',
           }}
         >
-          — C
+          — Bebot
         </span>
       </div>
     </div>
