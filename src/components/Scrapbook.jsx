@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { playPaper, playThud, playFlowerFall } from '../utils/sounds';
+import { startFinaleMusic } from '../utils/music';
 
 const AN = (d) => `itemIn 0.85s cubic-bezier(0.25, 1, 0.4, 1) ${d}s both`;
 const rot = (d) => ({ '--rot': `${d}deg` });
@@ -416,6 +417,460 @@ function Polaroid({ src, w, h, tape, tapePos, back, style, blank }) {
   );
 }
 
+const PHOTO_DB = 'scrapbook-photos';
+const PHOTO_STORE = 'galleries';
+const PHOTO_KEY = 'all';
+let photoDbPromise = null;
+let photoCache = null;
+
+function openPhotoDb() {
+  if (!('indexedDB' in window)) return Promise.reject(new Error('no idb'));
+  if (!photoDbPromise) {
+    photoDbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(PHOTO_DB, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(PHOTO_STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  return photoDbPromise;
+}
+
+async function loadPhotoStore() {
+  if (photoCache) return photoCache;
+  try {
+    const db = await openPhotoDb();
+    photoCache = await new Promise((resolve) => {
+      const tx = db.transaction(PHOTO_STORE, 'readonly');
+      const get = tx.objectStore(PHOTO_STORE).get(PHOTO_KEY);
+      get.onsuccess = () => resolve(get.result || { food: [], favorites: [] });
+      get.onerror = () => resolve({ food: [], favorites: [] });
+    });
+  } catch {
+    photoCache = { food: [], favorites: [] };
+  }
+  return photoCache;
+}
+
+async function mutatePhotoStore(fn) {
+  const s = await loadPhotoStore();
+  fn(s);
+  try {
+    const db = await openPhotoDb();
+    await new Promise((resolve) => {
+      const tx = db.transaction(PHOTO_STORE, 'readwrite');
+      tx.objectStore(PHOTO_STORE).put(s, PHOTO_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    return s;
+  }
+  return s;
+}
+
+function readAndShrink(file) {
+  return new Promise((resolve) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1000;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * scale));
+        c.height = Math.max(1, Math.round(img.height * scale));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        try {
+          resolve(c.toDataURL('image/webp', 0.85));
+        } catch {
+          resolve(c.toDataURL('image/jpeg', 0.85));
+        }
+      };
+      img.onerror = () => resolve(fr.result);
+      img.src = fr.result;
+    };
+    fr.onerror = () => resolve(null);
+    fr.readAsDataURL(file);
+  });
+}
+
+function MiniTape({ rotDeg = 0, style }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        transform: `rotate(${rotDeg}deg)`,
+        width: 34,
+        height: 13,
+        background:
+          'linear-gradient(105deg, rgba(226,196,124,0.55) 0%, rgba(238,210,148,0.5) 45%, rgba(205,175,115,0.55) 100%)',
+        boxShadow: '0 1px 3px rgba(60,40,20,0.18)',
+        borderLeft: '1px dashed rgba(255,255,255,0.5)',
+        borderRight: '1px dashed rgba(255,255,255,0.5)',
+        ...style,
+      }}
+    />
+  );
+}
+
+function PaperNote({ children, size = '1.05rem', rotDeg = 0, color = '#5a4030', style }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        transform: `rotate(${rotDeg}deg)`,
+        background: '#fdf7e8',
+        padding: '9px 13px',
+        borderRadius: '2px',
+        boxShadow: '0 4px 10px rgba(58,42,36,0.2)',
+        pointerEvents: 'none',
+        ...style,
+      }}
+    >
+      <span className="scribble" style={{ fontSize: size, color, lineHeight: 1.3 }}>
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function PressedFlower({ size = 40, rotDeg = 0, color = '#d4847a', style }) {
+  return (
+    <svg style={{ position: 'absolute', transform: `rotate(${rotDeg}deg)`, ...style }} width={size} height={size} viewBox="0 0 40 40">
+      {[0, 72, 144, 216, 288].map((a) => (
+        <ellipse key={a} cx="20" cy="12" rx="7" ry="10.5" fill={color} opacity="0.75" transform={`rotate(${a} 20 20)`} />
+      ))}
+      <circle cx="20" cy="20" r="4.5" fill="#b8923a" />
+      <path d="M20 24 C19 29, 15 32, 10 34" stroke="#7d9a6d" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LeafDoodle({ width = 26, rotDeg = 0, color = '#8fa97e', style }) {
+  return (
+    <svg style={{ position: 'absolute', transform: `rotate(${rotDeg}deg)`, ...style }} width={width} height={Math.round(width * 1.7)} viewBox="0 0 26 44">
+      <path d="M13 2 C22 12, 24 26, 13 42 C4 26, 4 12, 13 2 Z" fill={color} opacity="0.55" />
+      <path d="M13 4 C13 20, 13 32, 13 40" stroke="#5f7a52" strokeWidth="1.1" fill="none" opacity="0.75" />
+    </svg>
+  );
+}
+
+function StarDoodle({ size = 16, rotDeg = 0, color = '#8a6a48', style }) {
+  return (
+    <svg style={{ position: 'absolute', transform: `rotate(${rotDeg}deg)`, ...style }} width={size} height={size} viewBox="0 0 24 24">
+      <path d="M12 3 L14.2 9.2 L20.8 9.4 L15.6 13.6 L17.4 20 L12 16.2 L6.6 20 L8.4 13.6 L3.2 9.4 L9.8 9.2 Z" fill="none" stroke={color} strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function HeartDoodle({ size = 18, rotDeg = 0, color = '#c96f63', style }) {
+  return (
+    <svg style={{ position: 'absolute', transform: `rotate(${rotDeg}deg)`, ...style }} width={size} height={size} viewBox="0 0 24 24">
+      <path d="M12 19.5 C11.2 18.8, 3.5 14.4, 3.5 9 C3.5 6.1, 5.8 4.8, 7.9 4.8 C10 4.8, 12 6.5, 12 6.5 C12 6.5, 14 4.8, 16.1 4.8 C18.2 4.8, 20.5 6.1, 20.5 9 C20.5 14.4, 12.8 18.8, 12 19.5 Z" fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ButterflyDoodle({ size = 26, rotDeg = 0, style }) {
+  return (
+    <svg style={{ position: 'absolute', transform: `rotate(${rotDeg}deg)`, ...style }} width={size} height={Math.round(size * 0.85)} viewBox="0 0 30 26">
+      <path d="M15 13 C11 5, 3 6, 6 13 C9 20, 13 14, 15 13 Z" fill="#c9a2a8" opacity="0.8" />
+      <path d="M15 13 C19 5, 27 6, 24 13 C21 20, 17 14, 15 13 Z" fill="#d8b8bd" opacity="0.8" />
+      <path d="M15 13 C13 16, 12 21, 15 24 C18 21, 17 16, 15 13 Z" fill="#b98c93" opacity="0.8" />
+      <path d="M15 13 L15 23 M15 13 L11 7 M15 13 L19 7" stroke="#7a5a5f" strokeWidth="0.9" fill="none" opacity="0.7" />
+    </svg>
+  );
+}
+
+function ReceiptFragment({ rotDeg = 0, style }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        transform: `rotate(${rotDeg}deg)`,
+        width: 152,
+        background: '#f2efe6',
+        clipPath:
+          'polygon(0 0, 100% 0, 100% 86%, 92% 100%, 84% 87%, 76% 100%, 68% 87%, 60% 100%, 52% 87%, 44% 100%, 36% 87%, 28% 100%, 20% 87%, 12% 100%, 0 86%)',
+        boxShadow: '0 4px 10px rgba(58,42,36,0.18)',
+        padding: '10px 13px 12px',
+        ...style,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: '0.72rem',
+          letterSpacing: '0.08em',
+          color: '#7a6a5a',
+          textTransform: 'uppercase',
+          marginBottom: 6,
+          borderBottom: '1px dashed rgba(122,90,58,0.4)',
+          paddingBottom: 4,
+        }}
+      >
+        A LITTLE TEA
+      </div>
+      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.68rem', color: '#7a6a5a', lineHeight: 1.7 }}>
+        cake milk tea ... 1
+        <br />
+        cake matcha ..... 1
+        <br />
+        smiles .......... free
+      </div>
+    </div>
+  );
+}
+
+function EmptyFrame({ w = 250, h = 190, rotDeg = 0, style }) {
+  return (
+    <div style={{ position: 'absolute', transform: `rotate(${rotDeg}deg)`, width: w, height: h, ...style }}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(135deg, #8a5a33, #6f4426 60%, #5f3a20)',
+          borderRadius: 6,
+          boxShadow: '0 14px 34px rgba(58,42,36,0.4)',
+          padding: 14,
+        }}
+      >
+        <div style={{ position: 'absolute', inset: 14, background: '#fdfaf2', borderRadius: 2 }} />
+        <MiniTape rotDeg={-6} style={{ top: -5, left: '24%' }} />
+        <MiniTape rotDeg={5} style={{ bottom: -5, right: '20%' }} />
+      </div>
+    </div>
+  );
+}
+
+function PhotoGallery({ store, start = 0, count = 18, emptyLabel = 'Photo' }) {
+  const [items, setItems] = useState([]);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef(null);
+  const targetRef = useRef(null);
+  const replaceModeRef = useRef(false);
+
+  useEffect(() => {
+    let alive = true;
+    loadPhotoStore().then((s) => {
+      if (alive) setItems([...(s[store] || [])]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [store]);
+
+  async function refresh() {
+    const s = await loadPhotoStore();
+    setItems([...(s[store] || [])]);
+  }
+
+  async function onFile(e) {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f || !f.type.startsWith('image/')) return;
+    setBusy(true);
+    const url = await readAndShrink(f);
+    const g = targetRef.current;
+    if (url) {
+      await mutatePhotoStore((s) => {
+        const arr = s[store] || [];
+        if (replaceModeRef.current && g != null && g < arr.length) {
+          arr.splice(g, 1, url);
+        } else {
+          const i = g == null || g >= arr.length ? arr.length : g;
+          arr.splice(i, 0, url);
+        }
+        s[store] = arr;
+      });
+      await refresh();
+    }
+    setPreview(null);
+    setBusy(false);
+  }
+
+  async function deletePhoto(g) {
+    await mutatePhotoStore((s) => {
+      const arr = s[store] || [];
+      if (g != null && g >= 0 && g < arr.length) arr.splice(g, 1);
+    });
+    setPreview(null);
+    await refresh();
+  }
+
+  const ROT = [0, -2.5, 2, -1.5, 3, -3.5, 1.5, -4, 2.5, -1, 4, -2];
+  const rFor = (g) => ROT[Math.abs(g * 7) % ROT.length];
+  let filledHere = 0;
+  for (let p = 0; p < count; p++) {
+    if (items[start + p]) filledHere++;
+  }
+  const visibleCells = Math.max(1, Math.min(count, filledHere + 1));
+  const btn = {
+    fontFamily: "'Caveat', cursive",
+    fontSize: '1.02rem',
+    color: '#5a4030',
+    background: 'transparent',
+    border: '1px solid rgba(122,90,58,0.6)',
+    borderRadius: 999,
+    padding: '0.25rem 1.05rem',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  };
+
+  return (
+    <>
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '124px', gap: '0.55rem', maxWidth: 420, margin: '0 auto' }}>
+        {Array.from({ length: visibleCells }).map((_, p) => {
+          const g = start + p;
+          const img = items[g];
+          const r = rFor(g);
+          if (img) {
+            return (
+              <div
+                key={g}
+                className="g-photo"
+                onClick={() => setPreview(g)}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: 5,
+                  overflow: 'hidden',
+                  transform: `rotate(${r}deg)`,
+                  boxShadow: '0 3px 9px rgba(58,42,36,0.3)',
+                  cursor: 'zoom-in',
+                  background: '#fdfaf2',
+                }}
+              >
+                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <MiniTape style={{ top: -4, left: '62%' }} />
+              </div>
+            );
+          }
+          return (
+            <div
+              key={g}
+              className="g-slot"
+              onClick={() => {
+                replaceModeRef.current = false;
+                targetRef.current = g;
+                fileRef.current.click();
+              }}
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: 5,
+                border: '1.5px dashed rgba(122,90,58,0.45)',
+                background: 'rgba(255,250,238,0.45)',
+                transform: `rotate(${r}deg)`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.12rem',
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 16 16">
+                <path d="M8 2v12M2 8h12" stroke="#8a6a48" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              <span className="scribble" style={{ fontSize: '0.66rem', color: '#8a6a48', textAlign: 'center', lineHeight: 1.15 }}>
+                Add {emptyLabel}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      {busy && (
+        <div
+          style={{
+            position: 'fixed',
+            left: '50%',
+            bottom: '1.6rem',
+            transform: 'translateX(-50%)',
+            zIndex: 8900,
+            fontFamily: "'Caveat', cursive",
+            fontSize: '1.05rem',
+            color: '#5a4030',
+            background: '#fdf7e8',
+            padding: '0.4rem 1.1rem',
+            borderRadius: 999,
+            boxShadow: '0 6px 18px rgba(58,42,36,0.3)',
+          }}
+        >
+          tucking the photo in...
+        </div>
+      )}
+      {preview != null && items[preview] && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 8800,
+            background: 'rgba(30,18,8,0.72)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: 'fadeIn 0.25s ease',
+          }}
+          onClick={() => setPreview(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fdfaf2',
+              padding: '1.1rem 1.1rem 0.9rem',
+              borderRadius: 6,
+              boxShadow: '0 30px 80px rgba(0,0,0,0.5)',
+              maxWidth: '84vw',
+              maxHeight: '84vh',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.8rem',
+              transform: 'rotate(-1deg)',
+            }}
+          >
+            <img
+              src={items[preview]}
+              alt=""
+              style={{
+                maxWidth: '76vw',
+                maxHeight: '62vh',
+                objectFit: 'contain',
+                display: 'block',
+                borderRadius: 3,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem' }}>
+              <button
+                style={btn}
+                onClick={() => {
+                  replaceModeRef.current = true;
+                  targetRef.current = preview;
+                  fileRef.current.click();
+                }}
+              >
+                replace
+              </button>
+              <button style={btn} onClick={() => deletePhoto(preview)}>
+                delete
+              </button>
+              <button style={btn} onClick={() => setPreview(null)}>
+                close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function Page({ side, n, children }) {
   return (
     <div
@@ -428,6 +883,7 @@ function Page({ side, n, children }) {
         right: side === 'right' ? 0 : undefined,
         background: PAPER,
         overflow: 'hidden',
+        borderRadius: side === 'left' ? '10px 0 0 10px' : '0 10px 10px 0',
       }}
     >
       {children}
@@ -445,46 +901,60 @@ function Spread0() {
   return (
     <>
       <Page side="left" n="1">
-        <Tape rotDeg={-28} style={{ top: 26, left: 30 }} />
-        <Tape rotDeg={18} style={{ top: 26, right: 30 }} />
-        <div style={{ position: 'absolute', top: '26%', left: 0, right: 0, textAlign: 'center', animation: AN(0.15) }}>
-          <h2
-            style={{
-              fontFamily: "'Libre Baskerville', serif",
-              fontStyle: 'italic',
-              fontWeight: 400,
-              fontSize: 'clamp(1.7rem, 3vw, 2.4rem)',
-              color: '#3a2a24',
-              lineHeight: 1.3,
-              padding: '0 1rem',
-            }}
-          >
-            Our Little
-            <br />
-            Scrapbook
-          </h2>
-          <div style={{ width: '3.4rem', height: 1, background: '#b8923a', margin: '1rem auto 0.7rem', opacity: 0.7 }} />
-          <Note size="1.3rem" style={{ display: 'block', color: '#7a5a3a' }}>
-            a few pages i kept for you
-          </Note>
+        <div style={{ position: 'absolute', inset: 0, animation: 'introFade 2.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both' }}>
+          <div style={{ position: 'absolute', top: 38, left: 52, right: 52 }}>
+            <span className="scribble" style={{ fontSize: '1.75rem', color: '#5a4030' }}>Hi, kikay. 🤍</span>
+            <div style={{ marginTop: '0.85rem', fontFamily: "'Caveat', cursive", fontSize: '1.03rem', lineHeight: 1.42, color: '#5a4030' }}>
+              <p style={{ margin: '0 0 0.55rem' }}>If you're reading this... thank you.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>Before closing this little website, I wanted to leave one last place where all the little memories we've made could stay together.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>Not because I think we'll forget them...</p>
+              <p style={{ margin: '0 0 0.55rem' }}>but because I believe the smallest moments often become the most unforgettable ones.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>The conversations that made ordinary days brighter.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>The random pictures that slowly became some of my favorites.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>The meals we shared. The laughs. The little adventures.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>Looking back made me realize something...</p>
+              <p style={{ margin: '0 0 0.55rem' }}>Happiness doesn't always come from extraordinary moments.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>Sometimes it quietly hides inside ordinary days spent with someone special.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>So this scrapbook isn't really about photographs.</p>
+              <p style={{ margin: '0 0 0.55rem' }}>It's about the memories behind them.</p>
+              <p style={{ margin: 0 }}>And I'm really happy that I got to make those memories with you.</p>
+            </div>
+          </div>
+          <div style={{ position: 'absolute', top: 650, right: 34, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span className="scribble" style={{ fontSize: '1.2rem', color: '#5a4030' }}>Turn the page. :)</span>
+            <TinyArrow rotDeg={-35} color="#9b3a4a" style={{ position: 'relative' }} />
+          </div>
+          <PressedFlower size={46} rotDeg={14} style={{ top: 34, right: 34 }} />
+          <StarDoodle size={15} style={{ top: 150, right: 78 }} />
+          <StarDoodle size={12} rotDeg={30} style={{ top: 240, left: 130 }} />
+          <StarDoodle size={13} rotDeg={-20} style={{ top: 620, left: 64 }} />
+          <CoffeeStain size={130} style={{ top: 690, left: -24, opacity: 0.55 }} />
+          <PaperClip rotDeg={20} style={{ top: 18, left: '47%' }} />
+          <MiniTape rotDeg={8} style={{ top: 470, right: -8, width: 40, height: 15 }} />
         </div>
-        <DateStamp text="2025 — 2026" rotDeg={-4} style={{ bottom: '22%', left: '50%', marginLeft: -70 }} />
-        <CoffeeStain size={120} rotDeg={20} style={{ bottom: -16, right: -12 }} />
-        <FlowerDoodle size={30} color="#d4847a" style={{ bottom: '26%', right: '16%' }} />
-        <FlowerDoodle size={22} color="#b8923a" style={{ bottom: '30%', right: '26%' }} />
-        <Sticker kind="star" size={20} style={{ top: '18%', right: '12%' }} />
       </Page>
       <Page side="right" n="2">
-        <Polaroid src="/moments/1.jpg" w={225} h={280} tape tapePos={-4} back="July 20, 2026 — One of my happiest afternoons." style={{ top: '9%', left: '7%', transform: 'rotate(var(--rot,0deg))', '--rot': '-4deg' }} />
-        <Note size="1.35rem" style={{ position: 'absolute', top: '41%', left: '46%', transform: 'rotate(3deg)' }}>
-          The day finally arrived.
-        </Note>
-        <Polaroid src="/moments/2.jpg" w={140} h={180} style={{ bottom: '8%', right: '6%', transform: 'rotate(var(--rot,0deg))', '--rot': '6deg' }} />
-        <TinyArrow rotDeg={18} style={{ bottom: '32%', right: '24%' }} />
-        <FilmStrip imgs={['/moments/3.jpg', '/moments/4.jpg', '/moments/5.jpg']} rotDeg={-3} style={{ bottom: '7%', left: '8%' }} />
-        <Envelope note="I smiled the whole ride home." rotDeg={-5} style={{ bottom: '26%', right: '8%' }} />
-        <Sticker kind="heart" color="#d4847a" size={22} rotDeg={10} style={{ top: '12%', right: '10%' }} />
-        <CoffeeStain size={90} style={{ top: -14, left: -10 }} />
+        <div style={{ position: 'absolute', inset: 0, animation: 'introFade 2.8s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both' }}>
+          <span className="scribble" style={{ position: 'absolute', top: 40, left: 0, right: 0, textAlign: 'center', fontSize: '1.9rem', color: '#5a4030' }}>Our First Date</span>
+          <Polaroid src="/moments/1.jpg" w={300} h={305} tape tapePos={-2} style={{ top: 130, left: 56, transform: 'rotate(-3deg)' }} />
+          <Note size="1.02rem" style={{ position: 'absolute', top: 452, left: 66, transform: 'rotate(-1deg)' }}>"The day 'soon' finally became today."</Note>
+          <TinyArrow rotDeg={-70} color="#9b3a4a" style={{ top: 422, left: 120 }} />
+          <Polaroid src="/scrapbook/2.jpg" w={186} h={146} tape tapePos={6} style={{ top: 352, right: 58, transform: 'rotate(3deg)' }} />
+          <Note size="1rem" style={{ position: 'absolute', top: 514, right: 44, transform: 'rotate(1.5deg)', maxWidth: 220 }}>"I still think the milk tea tasted better because of the company."</Note>
+          <TinyArrow rotDeg={-110} color="#9b3a4a" style={{ top: 486, right: 170 }} />
+          <Polaroid src="/moments/7.jpg" w={158} h={158} tape tapePos={-8} style={{ top: 200, right: 96, transform: 'rotate(-2deg)' }} />
+          <Note size="0.98rem" style={{ position: 'absolute', top: 148, right: 60, transform: 'rotate(-2deg)' }}>"One of my favorite afternoons."</Note>
+          <TinyArrow rotDeg={55} color="#9b3a4a" style={{ top: 182, right: 152 }} />
+          <ReceiptFragment rotDeg={-3} style={{ top: 490, left: 215 }} />
+          <DateStamp text="OUR FIRST DATE" rotDeg={-5} style={{ top: 612, right: 60 }} />
+          <StarDoodle size={14} style={{ top: 96, left: 64 }} />
+          <StarDoodle size={11} rotDeg={25} style={{ top: 700, left: 120 }} />
+          <FlowerDoodle size={30} style={{ top: 620, right: 320, transform: 'rotate(15deg)' }} />
+          <HeartDoodle size={16} rotDeg={-12} style={{ top: 120, left: 250 }} />
+          <HeartDoodle size={13} rotDeg={10} style={{ top: 645, left: 70 }} />
+          <TinyArrow rotDeg={-25} color="#b8923a" style={{ top: 160, left: 66 }} />
+          <TinyArrow rotDeg={-150} color="#b8923a" style={{ top: 600, right: 210 }} />
+        </div>
       </Page>
     </>
   );
@@ -494,32 +964,24 @@ function Spread1() {
   return (
     <>
       <Page side="left" n="3">
-        <CoffeeStain size={150} rotDeg={-10} style={{ top: '16%', left: '12%' }} />
-        <Polaroid src="/moments/7.jpg" w={215} h={270} tape tapePos={6} back="Same place, same seats — still my favorite." style={{ top: '10%', left: '9%', transform: 'rotate(var(--rot,0deg))', '--rot': '4deg' }} />
-        <Note size="1.3rem" style={{ position: 'absolute', top: '53%', left: '47%', transform: 'rotate(-2deg)' }}>
-          This milk tea tasted better because of the company.
-        </Note>
-        <Polaroid src="/moments/6.png" w={165} h={195} style={{ bottom: '7%', left: '14%', transform: 'rotate(var(--rot,0deg))', '--rot': '-6deg' }} />
-        <Sticker kind="heart" color="#b8923a" size={20} rotDeg={-12} style={{ bottom: '16%', right: '12%' }} />
-        <Tape rotDeg={10} style={{ bottom: 30, right: 26 }} />
+        <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
+          <div style={{ textAlign: 'center' }}>
+            <span className="scribble" style={{ fontSize: '1.7rem', color: '#5a4030' }}>Our Food Memories</span>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '0.9rem', color: '#8a6a48', marginTop: '0.15rem' }}>Every meal has a story.</div>
+          </div>
+          <div style={{ marginTop: '0.8rem' }}>
+            <PhotoGallery store="food" start={0} emptyLabel="Food Photo" />
+          </div>
+        </div>
       </Page>
       <Page side="right" n="4">
-        <Polaroid src="/moments/9.jpg" w={200} h={250} tape tapePos={-6} back="Dessert first, everything else later." style={{ top: '8%', right: '8%', transform: 'rotate(var(--rot,0deg))', '--rot': '-4deg' }} />
-        <Note size="1.3rem" style={{ position: 'absolute', top: '47%', left: '6%', transform: 'rotate(2deg)' }}>
-          We definitely needed another dessert.
-        </Note>
-        <TornPaper rotDeg={-4} tone="#f6ecd4" style={{ top: '60%', left: '8%' }}>
-          <span className="scribble" style={{ fontSize: '1.05rem', color: '#6b4f38' }}>
-            milk tea x2
-            <br />
-            fries x1
-            <br />
-            laughs: unlimited
-          </span>
-        </TornPaper>
-        <Polaroid src="/moments/10.jpg" w={185} h={225} style={{ bottom: '6%', right: '7%', transform: 'rotate(var(--rot,0deg))', '--rot': '7deg' }} />
-        <TinyArrow rotDeg={-22} style={{ bottom: '34%', left: '42%' }} />
-        <Sticker kind="star" size={18} rotDeg={8} style={{ top: '30%', left: '12%' }} />
+        <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
+          <PhotoGallery store="food" start={18} emptyLabel="Food Photo" />
+        </div>
+        <PaperNote rotDeg={-3} size="1.02rem" style={{ top: 14, left: 22 }}>"This one was worth every bite."</PaperNote>
+        <PaperNote rotDeg={2} size="1.02rem" style={{ top: 30, right: 30 }}>"I'd happily eat this again."</PaperNote>
+        <PaperNote rotDeg={-2} size="0.98rem" style={{ top: 704, left: 26 }}>"The dessert disappeared too quickly."</PaperNote>
+        <PaperNote rotDeg={3} size="0.98rem" style={{ top: 716, right: 30 }}>"We definitely needed another milk tea."</PaperNote>
       </Page>
     </>
   );
@@ -529,26 +991,23 @@ function Spread2() {
   return (
     <>
       <Page side="left" n="5">
-        <Polaroid src="/moments/her.png" w={245} h={305} tape tapePos={-3} back="Some days I just think about this smile." style={{ top: '8%', left: '8%', transform: 'rotate(var(--rot,0deg))', '--rot': '-3deg' }} />
-        <Note size="1.35rem" style={{ position: 'absolute', top: '58%', left: '52%', transform: 'rotate(2deg)' }}>
-          I still remember this smile.
-        </Note>
-        <Polaroid src="/moments/her1.png" w={145} h={185} style={{ bottom: '7%', left: '12%', transform: 'rotate(var(--rot,0deg))', '--rot': '8deg' }} />
-        <FlowerDoodle size={26} color="#e0a97c" style={{ top: '24%', right: '14%' }} />
-        <FlowerDoodle size={18} color="#c9a45c" style={{ top: '33%', right: '20%' }} />
-        <CoffeeStain size={80} style={{ bottom: 4, right: 12 }} />
+        <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
+          <div style={{ textAlign: 'center' }}>
+            <span className="scribble" style={{ fontSize: '1.7rem', color: '#5a4030' }}>Our Favorite Pictures</span>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '0.9rem', color: '#8a6a48', marginTop: '0.15rem' }}>The little moments became my favorite ones.</div>
+          </div>
+          <div style={{ marginTop: '0.8rem' }}>
+            <PhotoGallery store="favorites" start={0} emptyLabel="Photo" />
+          </div>
+        </div>
       </Page>
       <Page side="right" n="6">
-        <Polaroid src="/moments/her3.png" w={205} h={255} tape tapePos={5} back="Proof that you glow even without filters." style={{ top: '8%', right: '9%', transform: 'rotate(var(--rot,0deg))', '--rot': '5deg' }} />
-        <Note size="1.3rem" style={{ position: 'absolute', top: '52%', left: '6%', transform: 'rotate(-2deg)' }}>
-          Still one of my favorite photos.
-        </Note>
-        <Envelope note="You looked so happy that day." rotDeg={4} style={{ top: '62%', left: '10%' }} />
-        <DateStamp text="APR 9" rotDeg={-6} style={{ bottom: '12%', left: '14%' }} />
-        <Sticker kind="star" size={20} rotDeg={-8} style={{ top: '12%', left: '10%' }} />
-        <Sticker kind="heart" color="#d4847a" size={18} rotDeg={12} style={{ bottom: '22%', right: '12%' }} />
-        <FilmStrip imgs={['/moments/11.jpg', '/moments/12.jpg', '/moments/13.jpg']} rotDeg={2} cell={54} style={{ bottom: '8%', right: '8%' }} />
-        <MoonDoodle size={26} style={{ top: '18%', right: '12%' }} />
+        <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
+          <PhotoGallery store="favorites" start={18} emptyLabel="Photo" />
+        </div>
+        <StarDoodle size={14} rotDeg={-15} style={{ top: 12, left: 24 }} />
+        <HeartDoodle size={15} rotDeg={12} style={{ top: 18, right: 26 }} />
+        <MiniTape rotDeg={-4} style={{ top: 700, left: '42%' }} />
       </Page>
     </>
   );
@@ -558,31 +1017,49 @@ function Spread3() {
   return (
     <>
       <Page side="left" n="7">
-        <Polaroid src="/moments/12.jpg" w={225} h={285} tape tapePos={-4} back="Our first photo strip. I wish we took ten more." style={{ top: '8%', left: '8%', transform: 'rotate(var(--rot,0deg))', '--rot': '-6deg' }} />
-        <Polaroid src="/moments/13.jpg" w={175} h={215} style={{ top: '46%', left: '40%', transform: 'rotate(var(--rot,0deg))', '--rot': '6deg' }} />
-        <Note size="1.3rem" style={{ position: 'absolute', top: '66%', left: '7%', transform: 'rotate(-2deg)' }}>
-          This little moment became one of my favorites.
-        </Note>
-        <FilmStrip imgs={['/moments/14.jpg', '/moments/15.jpg', '/moments/16.jpg']} rotDeg={2} cell={52} style={{ bottom: '7%', left: '8%' }} />
-        <PaperClip rotDeg={14} style={{ top: '10%', right: '14%' }} />
+        <span className="scribble" style={{ position: 'absolute', top: 40, left: 0, right: 0, textAlign: 'center', fontSize: '1.75rem', color: '#5a4030', lineHeight: 1.25 }}>
+          Little Things I Hope
+          <br />
+          You Never Forget
+        </span>
+        <PaperNote rotDeg={-4} style={{ top: 168, left: 70 }}>I'm always rooting for you.</PaperNote>
+        <PaperNote rotDeg={3} style={{ top: 190, right: 80 }}>Don't forget to eat.</PaperNote>
+        <PaperNote rotDeg={-2} style={{ top: 340, left: 150 }}>I'm proud of how hard you're working.</PaperNote>
+        <PaperNote rotDeg={2} style={{ top: 360, right: 140 }}>Take your time.</PaperNote>
+        <PaperNote rotDeg={-3} size="1.1rem" style={{ top: 540, left: 90 }}>Rest when you need to.</PaperNote>
+        <PaperNote rotDeg={1} style={{ top: 560, right: 90 }}>You deserve good things.</PaperNote>
+        <PaperNote rotDeg={-2} size="1.12rem" style={{ top: 660, left: 170 }}>Thank you for being you.</PaperNote>
+        <PressedFlower size={44} rotDeg={-12} style={{ top: 96, left: 70 }} />
+        <PressedFlower size={36} rotDeg={20} color="#c9a2a8" style={{ top: 600, right: 100 }} />
+        <LeafDoodle width={30} rotDeg={35} style={{ top: 300, left: 230 }} />
+        <LeafDoodle width={24} rotDeg={-30} style={{ top: 420, right: 210 }} />
+        <StarDoodle size={14} style={{ top: 150, left: 300 }} />
+        <StarDoodle size={12} rotDeg={18} style={{ top: 610, right: 300 }} />
+        <StarDoodle size={11} rotDeg={-12} style={{ top: 480, left: 60 }} />
+        <HeartDoodle size={17} rotDeg={-8} style={{ top: 470, right: 60 }} />
+        <HeartDoodle size={14} rotDeg={14} style={{ top: 630, left: 60 }} />
+        <MiniTape rotDeg={-6} style={{ top: 175, left: '48%' }} />
+        <MiniTape rotDeg={5} style={{ top: 420, right: '44%' }} />
+        <ButterflyDoodle size={26} rotDeg={-8} style={{ top: 330, right: 110 }} />
       </Page>
       <Page side="right" n="8">
-        <Polaroid src="/moments/17.jpg" w={195} h={245} tape tapePos={5} back="Tiring walk, worth every step." style={{ top: '8%', right: '9%', transform: 'rotate(var(--rot,0deg))', '--rot': '-4deg' }} />
-        <Note size="1.32rem" style={{ position: 'absolute', top: '47%', left: '6%', transform: 'rotate(2deg)' }}>
-          I don't think I'll ever forget this afternoon.
-        </Note>
-        <TornPaper rotDeg={-5} tone="#f2ead6" style={{ top: '56%', left: '8%' }}>
-          <span style={{ fontSize: '0.82rem', letterSpacing: '0.2em', color: '#7a5a3a', display: 'block', marginBottom: 4 }}>CINEMA</span>
-          <span className="scribble" style={{ fontSize: '1.02rem', color: '#4a342a' }}>
-            2 seats · middle row
-            <br />
-            keep the ticket — keep the memory
-          </span>
-        </TornPaper>
-        <Polaroid src="/moments/together.jpg" w={160} h={195} style={{ bottom: '7%', right: '8%', transform: 'rotate(var(--rot,0deg))', '--rot': '8deg' }} />
-        <MoonDoodle size={22} style={{ top: '14%', left: '12%' }} />
-        <Envelope note="I wish we took ten more." rotDeg={-6} style={{ bottom: '24%', left: '10%' }} />
-        <Sticker kind="heart" color="#b8923a" size={20} rotDeg={10} style={{ top: '58%', right: '10%' }} />
+        <span className="scribble" style={{ position: 'absolute', top: 56, left: 0, right: 0, textAlign: 'center', fontSize: '1.8rem', color: '#5a4030' }}>If We Ever Read This Again...</span>
+        <div style={{ position: 'absolute', top: 150, left: 80, right: 80, fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.08rem', lineHeight: 1.85, color: '#5a4030', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 0.7rem' }}>I don't know what this scrapbook will look like someday.</p>
+          <p style={{ margin: '0 0 0.7rem' }}>Maybe it'll stay exactly like this.</p>
+          <p style={{ margin: '0 0 0.7rem' }}>Maybe it'll become twice as full.</p>
+          <p style={{ margin: '0 0 0.7rem' }}>Maybe we'll look back at these pages and smile because of how much has changed.</p>
+          <p style={{ margin: '0 0 0.7rem' }}>Whatever happens... I'm simply grateful that these memories exist.</p>
+          <p style={{ margin: '0 0 0.7rem' }}>Because every page reminds me that some of the happiest moments I've had...</p>
+          <p style={{ margin: '0 0 0.7rem' }}>were the ones I got to share with you.</p>
+          <p style={{ margin: '0 0 0.7rem' }}>And if life gives us more memories,</p>
+          <p style={{ margin: 0 }}>I'd happily keep filling this scrapbook, one page at a time.</p>
+        </div>
+        <CoffeeStain size={120} style={{ top: 660, right: -20, opacity: 0.5 }} />
+        <StarDoodle size={13} rotDeg={20} style={{ top: 150, right: 60 }} />
+        <StarDoodle size={12} rotDeg={-15} style={{ top: 420, left: 60 }} />
+        <LeafDoodle width={26} rotDeg={-20} style={{ top: 550, left: 70 }} />
+        <PressedFlower size={36} rotDeg={10} style={{ top: 570, right: 70 }} />
       </Page>
     </>
   );
@@ -592,22 +1069,57 @@ function Spread4() {
   return (
     <>
       <Page side="left" n="9">
-        <FlowerDoodle size={26} color="#d9c0a0" style={{ top: '30%', left: '42%' }} />
-        <Sticker kind="star" size={16} color="#c9b678" style={{ top: '26%', left: '40%' }} />
-        <Note size="1.05rem" color="rgba(90,64,48,0.45)" style={{ position: 'absolute', top: '70%', left: 0, right: 0, textAlign: 'center' }}>
-          ...
-        </Note>
+        <div style={{ position: 'absolute', top: 150, left: '50%', marginLeft: -205, width: 410, height: 410, transform: 'rotate(1deg)' }}>
+          <img
+            src="/moments/16.jpg"
+            alt=""
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              borderRadius: 2,
+              boxShadow: '0 18px 40px rgba(58,42,36,0.35)',
+              filter: 'saturate(1.05) contrast(1.02) brightness(1.03)',
+            }}
+          />
+          <Tape rotDeg={-12} style={{ top: -13, left: '14%' }} />
+          <Tape rotDeg={10} style={{ bottom: -13, right: '12%' }} />
+        </div>
+        <div style={{ position: 'absolute', top: 610, left: 0, right: 0, textAlign: 'center' }}>
+          <span className="scribble" style={{ fontSize: '1.5rem', color: '#5a4030', lineHeight: 1.3 }}>
+            "My favorite page...
+            <br />
+            so far."
+          </span>
+        </div>
+        <TinyArrow rotDeg={0} color="#9b3a4a" style={{ top: 330, right: 30 }} />
+        <Note size="1.05rem" style={{ position: 'absolute', top: 352, right: 30, transform: 'rotate(0.5deg)' }}>One last page...</Note>
+        <PressedFlower size={42} rotDeg={-8} style={{ top: 580, left: 80 }} />
+        <StarDoodle size={13} rotDeg={15} style={{ top: 600, right: 110 }} />
+        <CoffeeStain size={100} style={{ top: 60, left: -24, opacity: 0.45 }} />
       </Page>
       <Page side="right" n="10">
-        <Polaroid src="/moments/together.jpg" w={330} h={400} tape tapePos={-2} back="One of the many reasons I keep writing pages." style={{ top: '6%', left: '50%', marginLeft: -165, transform: 'rotate(var(--rot,0deg))', '--rot': '-2deg' }} />
-        <Note size="2rem" color="#3a2a24" style={{ position: 'absolute', top: '61%', left: 0, right: 0, textAlign: 'center', fontWeight: 600 }}>
-          To be continued...
-        </Note>
-        <Note size="1.15rem" color="#8a6a48" style={{ position: 'absolute', top: '69%', left: 0, right: 0, textAlign: 'center' }}>
-          I hope someday we'll have plenty more pages to fill.
-        </Note>
-        <Polaroid blank w={170} h={205} tape tapePos={4} style={{ bottom: '5%', left: '8%', transform: 'rotate(var(--rot,0deg))', '--rot': '-3deg' }} />
-        <TinyArrow rotDeg={8} style={{ bottom: '24%', left: '36%' }} />
+        <span className="scribble" style={{ position: 'absolute', top: 46, left: 0, right: 0, textAlign: 'center', fontSize: '1.9rem', color: '#5a4030' }}>To Be Continued...</span>
+        <EmptyFrame w={270} h={200} rotDeg={2} style={{ top: 130, left: '50%', marginLeft: -135 }} />
+        <Note size="1.2rem" style={{ position: 'absolute', top: 372, left: 0, right: 0, textAlign: 'center' }}>Reserved for our next memory. 🤍</Note>
+        <div style={{ position: 'absolute', top: 430, left: 70, right: 70, fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.02rem', lineHeight: 1.8, color: '#5a4030', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 0.6rem' }}>I hope this won't always be the last page.</p>
+          <p style={{ margin: '0 0 0.6rem' }}>Maybe one day we'll look back at this scrapbook and realize that our favorite memories hadn't happened yet.</p>
+          <p style={{ margin: '0 0 0.6rem' }}>Until then...</p>
+          <p style={{ margin: '0 0 0.6rem' }}>thank you for every laugh, every conversation, every photo, every meal,</p>
+          <p style={{ margin: '0 0 0.6rem' }}>and every ordinary day that quietly became unforgettable.</p>
+        </div>
+        <div style={{ position: 'absolute', top: 640, left: 0, right: 0, textAlign: 'center' }}>
+          <span className="scribble" style={{ fontSize: '1.12rem', color: '#5a4030', lineHeight: 1.35 }}>
+            "The best stories aren't finished.
+            <br />
+            They're simply waiting for the next page."
+          </span>
+        </div>
+        <CoffeeStain size={110} style={{ top: 700, left: -20, opacity: 0.5 }} />
+        <StarDoodle size={12} style={{ top: 210, left: 60 }} />
+        <HeartDoodle size={15} rotDeg={-10} style={{ top: 260, right: 80 }} />
       </Page>
     </>
   );
@@ -641,25 +1153,28 @@ function FlowerFall() {
 }
 
 export default function Scrapbook({ onExit }) {
-  const audioRef = useRef(null);
   const [bookIn, setBookIn] = useState(false);
   const [thudDone, setThudDone] = useState(false);
   const [coverState, setCoverState] = useState('hidden');
   const [itemsReady, setItemsReady] = useState(false);
   const [spread, setSpread] = useState(0);
-  const [turning, setTurning] = useState(false);
+  const [flip, setFlip] = useState(null);
   const [closing, setClosing] = useState(false);
   const [black, setBlack] = useState(false);
   const [finalText, setFinalText] = useState(false);
   const closedRef = useRef(false);
+  const lastFlipRef = useRef(0);
+  const rootRef = useRef(null);
+  const navRef = useRef({});
+  navRef.current = { flip, spread, closing, nextPage, prevPage };
+  const flipRef = useRef(null);
+  flipRef.current = flip;
+  const [hintHidden, setHintHidden] = useState(false);
+  const hintHiddenRef = useRef(false);
   const [dust, setDust] = useState([]);
 
   useEffect(() => {
-    const a = audioRef.current;
-    if (a) {
-      a.volume = 0.45;
-      a.play().catch(() => {});
-    }
+    startFinaleMusic(0.45);
     const t = [];
     t.push(setTimeout(() => setBookIn(true), 350));
     t.push(
@@ -685,10 +1200,6 @@ export default function Scrapbook({ onExit }) {
     t.push(setTimeout(() => setItemsReady(true), 4600));
     return () => {
       t.forEach(clearTimeout);
-      if (a) {
-        a.pause();
-        a.currentTime = 0;
-      }
     };
   }, []);
 
@@ -703,6 +1214,36 @@ export default function Scrapbook({ onExit }) {
     return () => clearTimeout(t);
   }, [spread, itemsReady, closing]);
 
+  useEffect(() => {
+    if (flip && flip.phase === 'start') {
+      const raf = requestAnimationFrame(() => {
+        setFlip((f) => (f ? { ...f, phase: 'go' } : f));
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+    if (flip && flip.phase === 'go') {
+      const t = setTimeout(completeFlip, 1300);
+      return () => clearTimeout(t);
+    }
+  }, [flip]);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      e.preventDefault();
+      const st = navRef.current;
+      if (st.closing || st.flip) return;
+      if (Date.now() - lastFlipRef.current < 350) return;
+      hintHiddenRef.current = true;
+      setHintHidden(true);
+      if (e.deltaY > 0) st.nextPage();
+      else if (e.deltaY < 0) st.prevPage();
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
   function startClose() {
     setClosing(true);
     playPaper();
@@ -716,21 +1257,46 @@ export default function Scrapbook({ onExit }) {
   }
 
   function nextPage() {
-    if (turning || closing) return;
+    if (flip || closing) return;
     if (spread >= SPREADS.length - 1) return;
-    setTurning(true);
     playPaper();
-    setTimeout(() => {
-      setSpread((s) => s + 1);
-      setTurning(false);
-    }, 680);
+    lastFlipRef.current = Date.now();
+    setFlip({ index: spread, dir: 'forward', phase: 'start' });
+  }
+
+  function prevPage() {
+    if (flip || closing) return;
+    if (spread <= 0) return;
+    playPaper();
+    lastFlipRef.current = Date.now();
+    setFlip({ index: spread - 1, dir: 'backward', phase: 'start' });
+  }
+
+  function completeFlip() {
+    const f = flipRef.current;
+    if (!f) return;
+    setSpread((s) => (f.dir === 'forward' ? s + 1 : s - 1));
+    setFlip(null);
+  }
+
+  function onFlipEnd(e) {
+    if (e.propertyName !== 'transform' || e.target !== e.currentTarget) return;
+    completeFlip();
   }
 
   const Current = SPREADS[spread];
-  const Next = turning && spread + 1 < SPREADS.length ? SPREADS[spread + 1] : null;
+  const Prev = flip && flip.index >= 0 ? SPREADS[flip.index] : null;
+  const Next = flip && flip.index + 1 < SPREADS.length ? SPREADS[flip.index + 1] : null;
+  let angle = 0;
+  if (flip) {
+    angle = flip.dir === 'forward'
+      ? flip.phase === 'go' ? -180 : 0
+      : flip.phase === 'go' ? 0 : -180;
+  }
 
   return (
     <div
+      ref={rootRef}
       style={{
         position: 'fixed',
         inset: 0,
@@ -741,16 +1307,24 @@ export default function Scrapbook({ onExit }) {
           'repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0 2px, transparent 2px 7px), linear-gradient(180deg, #6b4527 0%, #5a3820 38%, #493019 70%, #38220f 100%)',
       }}
     >
-      <audio ref={audioRef} src="/music/Musika.mp3" loop preload="auto" />
-
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          paddingTop: 'calc((100vh - min(840px, 88vh)) / 2)',
+        }}
+      >
         <div style={{ perspective: '2800px', animation: closing ? 'bookShrink 2.6s cubic-bezier(0.5, 0, 0.8, 0.4) both' : 'none' }}>
           <div
             style={{
               position: 'relative',
               width: 'min(1500px, 94vw)',
-              height: 'min(840px, 88vh)',
+              height: '1140px',
               transformOrigin: 'center bottom',
+              transformStyle: 'preserve-3d',
               animation: bookIn ? 'bookRise 1.75s cubic-bezier(0.22, 1, 0.36, 1) both' : 'none',
             }}
           >
@@ -758,6 +1332,7 @@ export default function Scrapbook({ onExit }) {
               style={{
                 position: 'absolute',
                 inset: 0,
+                transformStyle: 'preserve-3d',
                 borderRadius: '14px',
                 boxShadow:
                   '0 60px 90px rgba(20,10,5,0.55), 0 1px 0 #e9ddc2, 0 2px 0 #e2d4b6, 0 3px 0 #dccdab, 0 4px 0 #d6c6a2',
@@ -770,55 +1345,132 @@ export default function Scrapbook({ onExit }) {
                 inset: '4px 6px 5px 6px',
                 borderRadius: '10px',
                 background: '#f6eed8',
-                overflow: 'hidden',
+                transformStyle: 'preserve-3d',
               }}
             >
               <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  bottom: 0,
-                  left: '50%',
-                  width: '34px',
-                  marginLeft: -17,
-                  background:
-                    'linear-gradient(90deg, rgba(58,42,36,0.12), rgba(58,42,36,0.03) 45%, rgba(58,42,36,0.12))',
-                  zIndex: 8,
-                  pointerEvents: 'none',
-                }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: '50%',
+                    width: '34px',
+                    marginLeft: -17,
+                    background:
+                      'linear-gradient(90deg, rgba(58,42,36,0.12), rgba(58,42,36,0.03) 45%, rgba(58,42,36,0.12))',
+                    transform: 'translateZ(1px)',
+                    pointerEvents: 'none',
+                  }}
               />
               {itemsReady && (
-                <div style={{ position: 'absolute', inset: 0 }}>
-                  {Next && (
-                    <div style={{ position: 'absolute', inset: 0, animation: 'sheetIn 0.68s cubic-bezier(0.3, 0.7, 0.3, 1) both', transformOrigin: 'left center' }}>
-                      <Next />
+                <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }}>
+                  {Array.from({ length: Math.min(spread, 6) }).map((_, i) => (
+                    <div
+                      key={`lstack-${i}`}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        left: -2 - i * 1.4,
+                        background: '#e2d3ac',
+                        boxShadow: '0 0 0 1px rgba(60,40,10,0.15)',
+                      }}
+                    />
+                  ))}
+                  {Array.from({ length: Math.min(SPREADS.length - 1 - spread, 6) }).map((_, i) => (
+                    <div
+                      key={`rstack-${i}`}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        right: -2 - i * 1.4,
+                        background: '#e2d3ac',
+                        boxShadow: '0 0 0 1px rgba(60,40,10,0.15)',
+                      }}
+                    />
+                  ))}
+                  {!flip && (
+                    <div style={{ position: 'absolute', inset: 0 }}>
+                      <Current />
                     </div>
                   )}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      transformOrigin: 'left center',
-                      transformStyle: 'preserve-3d',
-                      animation: turning ? 'pageFlipAway 0.68s cubic-bezier(0.5, 0, 0.9, 0.4) both' : 'none',
-                      zIndex: turning ? 3 : 2,
-                    }}
-                  >
-                    <Current />
-                  </div>
+                  {flip && (
+                    <>
+                      <div className="flip-static" style={{ position: 'absolute', inset: 0, clipPath: flip.dir === 'forward' ? 'inset(0 50% 0 0)' : 'inset(0 0 0 50%)' }}>
+                        {flip.dir === 'forward' ? <Current /> : <Prev />}
+                      </div>
+                      <div className="flip-static" style={{ position: 'absolute', inset: 0, clipPath: flip.dir === 'forward' ? 'inset(0 0 0 50%)' : 'inset(0 50% 0 0)' }}>
+                        {flip.dir === 'forward' ? <Next /> : <Current />}
+                      </div>
+                      <div
+                        onTransitionEnd={onFlipEnd}
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          transformOrigin: '50% 50%',
+                          transformStyle: 'preserve-3d',
+                          zIndex: 50,
+                          transform: `rotateY(${angle}deg)`,
+                          transition: 'transform 1.05s cubic-bezier(0.45, 0.05, 0.15, 1)',
+                        }}
+                      >
+                        <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden' }}>
+                          <div className="flip-static" style={{ position: 'absolute', inset: 0, clipPath: 'inset(0 0 0 50%)' }}>
+                            {flip.dir === 'forward' ? <Current /> : <Prev />}
+                          </div>
+                          <div
+                            aria-hidden
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              bottom: 0,
+                              left: '50%',
+                              right: 0,
+                              boxShadow: '2px 0 10px rgba(0,0,0,0.3)',
+                              background: 'linear-gradient(90deg, rgba(0,0,0,0.35), transparent 40%)',
+                              opacity: flip.phase === 'go' ? 1 : 0,
+                              animation: flip.phase === 'go' ? 'flipFrontShadow 1.05s linear both' : 'none',
+                              pointerEvents: 'none',
+                            }}
+                          />
+                        </div>
+                        <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                          <div className="flip-static" style={{ position: 'absolute', inset: 0, clipPath: 'inset(0 50% 0 0)' }}>
+                            {flip.dir === 'forward' ? <Next /> : <Current />}
+                          </div>
+                          <div
+                            aria-hidden
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              bottom: 0,
+                              left: 0,
+                              right: '50%',
+                              boxShadow: '-2px 0 10px rgba(0,0,0,0.3)',
+                              background: 'linear-gradient(270deg, rgba(0,0,0,0.35), transparent 40%)',
+                              opacity: flip.phase === 'go' ? 0.5 : 0,
+                              animation: flip.phase === 'go' ? 'flipBackShadow 1.05s linear both' : 'none',
+                              pointerEvents: 'none',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
 
             {coverState !== 'done' && (
               <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  zIndex: 10,
-                  transformOrigin: 'left center',
-                  transformStyle: 'preserve-3d',
-                  borderRadius: '14px',
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 10,
+                    transform: 'translateZ(2px)',
+                    transformOrigin: 'left center',
+                    transformStyle: 'preserve-3d',
+                    backfaceVisibility: 'hidden',
+                    borderRadius: '14px',
                   background:
                     'repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0 3px, transparent 3px 9px), linear-gradient(135deg, #5d3a24 0%, #4a2c18 55%, #3c2210 100%)',
                   boxShadow: '0 40px 80px rgba(15,8,4,0.6)',
@@ -842,6 +1494,7 @@ export default function Scrapbook({ onExit }) {
                     padding: '2.2rem 3.4rem',
                     textAlign: 'center',
                     background: 'rgba(255,235,200,0.05)',
+                    transform: 'translateY(-200px)',
                   }}
                 >
                   <span
@@ -896,29 +1549,55 @@ export default function Scrapbook({ onExit }) {
         </div>
       </div>
 
-      {itemsReady && !closing && (
-        <button
-          onClick={nextPage}
-          disabled={spread >= SPREADS.length - 1}
+      <style>{`
+        .g-photo { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .g-photo:hover { transform: scale(1.07) rotate(0deg) !important; box-shadow: 0 12px 26px rgba(58,42,36,0.4); z-index: 2; }
+        .g-slot { transition: background 0.2s ease, border-color 0.2s ease, transform 0.25s ease; }
+        .g-slot:hover { background: rgba(255,250,238,0.85); border-color: rgba(155,58,74,0.55); transform: scale(1.04) rotate(0deg) !important; }
+        .hint-bounce { animation: hintBounce 1.7s ease-in-out infinite; }
+        @keyframes hintBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
+        .hint-pulse { animation: hintPulse 2s ease-in-out infinite; }
+        @keyframes hintPulse { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.5; } }
+        @keyframes introFade { 0% { opacity: 0; transform: translateY(18px); } 100% { opacity: 1; transform: translateY(0); } }
+      `}</style>
+
+      {itemsReady && !closing && !hintHidden && spread < SPREADS.length - 1 && (
+        <div
           style={{
             position: 'fixed',
-            bottom: '2rem',
-            right: '2.5rem',
-            zIndex: 30,
-            fontFamily: "'Caveat', cursive",
-            fontSize: '1.15rem',
-            color: '#f2e3c4',
-            background: 'rgba(58,42,36,0.55)',
-            border: '1px solid rgba(242,227,196,0.4)',
-            padding: '0.5rem 1.4rem',
-            borderRadius: '999px',
-            cursor: spread >= SPREADS.length - 1 ? 'default' : 'pointer',
-            opacity: spread >= SPREADS.length - 1 ? 0.35 : 1,
-            transition: 'all 0.3s ease',
+            left: '50%',
+            bottom: '1.6rem',
+            transform: 'translateX(-50%)',
+            zIndex: 8500,
+            pointerEvents: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.15rem',
           }}
         >
-          {spread >= SPREADS.length - 1 ? 'the last page' : 'turn the page →'}
-        </button>
+          <span
+            className="hint-pulse"
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: '0.62rem',
+              letterSpacing: '0.28em',
+              textTransform: 'uppercase',
+              color: 'rgba(242,227,196,0.9)',
+              background: 'rgba(58,42,36,0.72)',
+              border: '1px solid rgba(242,227,196,0.35)',
+              padding: '0.5rem 1.3rem',
+              borderRadius: 999,
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            scroll to turn the page
+          </span>
+          <svg className="hint-bounce" width="18" height="26" viewBox="0 0 18 26" fill="none">
+            <path d="M4 2 L9 7 L14 2" stroke="#f2e3c4" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M4 13 L9 18 L14 13" stroke="#f2e3c4" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+          </svg>
+        </div>
       )}
 
       {closing && <FlowerFall />}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { startFinaleMusic } from '../utils/music';
 
 const PHOTOS = {
   bgTL: '/moments/5.jpg',
@@ -21,13 +22,14 @@ function HangingPolaroid({
   opacity = 1,
   swingDelay = 0,
   drift,
-  drifting,
+  revealed,
 }) {
+  const topVh = parseFloat(top) || 0;
   return (
     <div
       style={{
         position: 'absolute',
-        top,
+        top: 0,
         left,
         right,
         zIndex: drift === 'none' ? 2 : 3,
@@ -39,9 +41,10 @@ function HangingPolaroid({
           justifyContent: 'center',
           gap: strings > 1 ? '64px' : 0,
           transformOrigin: 'top center',
-          animation: 'stringDrop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both',
-          transition: 'opacity 0.6s ease',
-          opacity: drifting ? 0 : 1,
+          animation: revealed
+            ? 'stringDrop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both'
+            : 'none',
+          opacity: revealed ? 1 : 0,
         }}
       >
         {Array.from({ length: strings }).map((_, i) => (
@@ -49,7 +52,7 @@ function HangingPolaroid({
             key={i}
             style={{
               width: '1px',
-              height: '88px',
+              height: `calc(${topVh}vh + 88px)`,
               background: 'linear-gradient(180deg, rgba(58,42,36,0.75), rgba(58,42,36,0.25))',
             }}
           />
@@ -58,9 +61,10 @@ function HangingPolaroid({
       <div
         style={{
           marginTop: '-2px',
-          animation: drifting
-            ? `${drift} 2.2s cubic-bezier(0.4, 0, 1, 1) both`
-            : `polaroidSwingIn 2.2s ${swingDelay}s cubic-bezier(0.34, 1.56, 0.64, 1) both`,
+          animation: revealed
+            ? `polaroidSwingIn 2.2s ${swingDelay}s cubic-bezier(0.34, 1.56, 0.64, 1) both`
+            : 'none',
+          opacity: revealed ? 1 : 0,
           '--rot': `${rot}deg`,
           '--swing-from': `${rot + 34}deg`,
         }}
@@ -110,26 +114,33 @@ function HangingPolaroid({
   );
 }
 
-export default function BridgeSection({ onComplete }) {
-  const audioRef = useRef(null);
+export default function BridgeSection({ onOpenScrapbook }) {
   const [line, setLine] = useState(0);
-  const [textGone, setTextGone] = useState(false);
-  const [drifting, setDrifting] = useState(false);
+  const [buttonShown, setButtonShown] = useState(false);
   const [dust, setDust] = useState([]);
-  const doneRef = useRef(false);
+  const [revealed, setRevealed] = useState(false);
+  const rootRef = useRef(null);
 
   useEffect(() => {
-    const a = audioRef.current;
-    if (a) {
-      a.volume = 0.35;
-      a.play().catch(() => {});
-    }
-    return () => {
-      if (a) {
-        a.pause();
-        a.currentTime = 0;
-      }
-    };
+    startFinaleMusic(0.35);
+  }, []);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            setRevealed(true);
+            obs.disconnect();
+          }
+        });
+      },
+      { rootMargin: '0px 0px -20% 0px', threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
 
   useEffect(() => {
@@ -146,22 +157,14 @@ export default function BridgeSection({ onComplete }) {
   }, []);
 
   useEffect(() => {
+    if (!revealed) return;
     const t = [];
     t.push(setTimeout(() => setLine(1), 2600));
     t.push(setTimeout(() => setLine(2), 4600));
     t.push(setTimeout(() => setLine(3), 6600));
-    t.push(setTimeout(() => setTextGone(true), 12700));
-    t.push(setTimeout(() => setDrifting(true), 13800));
-    t.push(
-      setTimeout(() => {
-        if (!doneRef.current && onComplete) {
-          doneRef.current = true;
-          onComplete();
-        }
-      }, 16200)
-    );
+    t.push(setTimeout(() => setButtonShown(true), 7600));
     return () => t.forEach(clearTimeout);
-  }, [onComplete]);
+  }, [revealed]);
 
   const textStyle = (delay) => ({
     fontFamily: "'Libre Baskerville', serif",
@@ -176,18 +179,17 @@ export default function BridgeSection({ onComplete }) {
 
   return (
     <div
+      ref={rootRef}
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1500,
+        position: 'relative',
+        width: '100%',
+        minHeight: '100vh',
         overflow: 'hidden',
         background:
           'linear-gradient(160deg, #fdf6ed 0%, #f5ede0 50%, #f0e6d6 100%)',
         animation: 'fadeIn 0.9s ease',
       }}
     >
-      <audio ref={audioRef} src="/music/Musika.mp3" loop preload="auto" />
-
       <div
         style={{
           position: 'absolute',
@@ -229,7 +231,7 @@ export default function BridgeSection({ onComplete }) {
         opacity={0.3}
         swingDelay={0.7}
         drift="none"
-        drifting={drifting}
+        revealed={revealed}
       />
       <HangingPolaroid
         src={PHOTOS.bgTR}
@@ -243,7 +245,7 @@ export default function BridgeSection({ onComplete }) {
         opacity={0.3}
         swingDelay={1.1}
         drift="none"
-        drifting={drifting}
+        revealed={revealed}
       />
       <HangingPolaroid
         src={PHOTOS.bgTop}
@@ -257,7 +259,7 @@ export default function BridgeSection({ onComplete }) {
         opacity={0.25}
         swingDelay={1.5}
         drift="none"
-        drifting={drifting}
+        revealed={revealed}
       />
 
       <HangingPolaroid
@@ -267,10 +269,10 @@ export default function BridgeSection({ onComplete }) {
         rot={-5}
         top="20%"
         left="5vw"
-        strings={2}
+        strings={1}
         swingDelay={1.3}
         drift="driftLeft"
-        drifting={drifting}
+        revealed={revealed}
       />
       <HangingPolaroid
         src={PHOTOS.fgRight}
@@ -282,7 +284,7 @@ export default function BridgeSection({ onComplete }) {
         strings={1}
         swingDelay={1.7}
         drift="driftRight"
-        drifting={drifting}
+        revealed={revealed}
       />
 
       <div
@@ -296,8 +298,6 @@ export default function BridgeSection({ onComplete }) {
           justifyContent: 'center',
           padding: '0 10vw',
           pointerEvents: 'none',
-          transition: 'opacity 1.2s ease',
-          opacity: textGone ? 0 : 1,
         }}
       >
         <h2 style={{ ...textStyle(1), fontSize: 'clamp(1.7rem, 3.6vw, 2.4rem)', maxWidth: '900px', marginBottom: '1.2rem' }}>
@@ -317,6 +317,38 @@ export default function BridgeSection({ onComplete }) {
         >
           Because some memories deserve a place they'll never be forgotten.
         </p>
+        <button
+          onClick={onOpenScrapbook}
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontStyle: 'italic',
+            fontSize: 'clamp(1rem, 1.8vw, 1.15rem)',
+            letterSpacing: '0.08em',
+            color: '#9b3a4a',
+            background: 'rgba(255,252,245,0.88)',
+            border: '1px solid rgba(155,58,74,0.45)',
+            padding: '0.75rem 2.2rem',
+            borderRadius: '999px',
+            cursor: 'pointer',
+            pointerEvents: buttonShown ? 'auto' : 'none',
+            marginTop: '1.6rem',
+            boxShadow: '0 8px 22px rgba(58,42,36,0.14)',
+            opacity: buttonShown ? 1 : 0,
+            transform: buttonShown ? 'translateY(0)' : 'translateY(12px)',
+            transition:
+              'opacity 0.9s ease, transform 0.9s cubic-bezier(0.25, 1, 0.4, 1), background 0.3s ease, color 0.3s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#9b3a4a';
+            e.currentTarget.style.color = '#fff7d6';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,252,245,0.88)';
+            e.currentTarget.style.color = '#9b3a4a';
+          }}
+        >
+          I have something for you
+        </button>
       </div>
     </div>
   );

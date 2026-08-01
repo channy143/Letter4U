@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const MESSAGES = [
   'Your laugh always finds a way to brighten my day.',
@@ -20,7 +20,6 @@ const FINAL_MESSAGE = "No matter where life takes us, I'm grateful that our path
 const GOLD = ['#fff7d6', '#ffe9a8', '#ffd76e', '#f5c445', '#e8a33d', '#f0b429'];
 
 export default function HeartPage({ onClose, onComplete }) {
-  const audioRef = useRef(null);
   const [revealedCount, setRevealedCount] = useState(0);
   const [orbiting, setOrbiting] = useState(false);
   const [rotating, setRotating] = useState(false);
@@ -47,17 +46,6 @@ export default function HeartPage({ onClose, onComplete }) {
   const circleRot = circleAngles.map((a) =>
     Math.sin((a * Math.PI) / 180) < 0 ? a + 90 : a - 90
   );
-
-  useEffect(() => {
-    const a = audioRef.current;
-    if (!a) return;
-    a.volume = 0.7;
-    a.play().catch(() => {});
-    return () => {
-      a.pause();
-      a.currentTime = 0;
-    };
-  }, []);
 
   useEffect(() => {
     const t = [];
@@ -100,17 +88,15 @@ export default function HeartPage({ onClose, onComplete }) {
   return (
     <div
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1500,
+        position: 'relative',
+        width: '100%',
+        height: '100%',
         background: 'linear-gradient(160deg, #fdf6ed 0%, #f5ede0 50%, #f0e6d6 100%)',
         overflow: 'hidden',
         fontFamily: "'Cormorant Garamond', serif",
         animation: 'fadeIn 0.6s ease',
       }}
     >
-      <audio ref={audioRef} src="/music/Musika.mp3" loop preload="auto" />
-
       <div
         style={{
           position: 'absolute',
@@ -152,7 +138,7 @@ export default function HeartPage({ onClose, onComplete }) {
       <button
         onClick={onClose}
         style={{
-          position: 'fixed',
+          position: 'absolute',
           top: '1.5rem',
           right: '2rem',
           zIndex: 10,

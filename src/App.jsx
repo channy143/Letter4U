@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { stopFinaleMusic, startFinaleMusic } from './utils/music';
 import PetalCanvas from './components/PetalCanvas';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -12,9 +13,7 @@ import WebGLBackground from './components/WebGLBackground';
 import FlowersFall from './components/FlowersFall';
 import PhotoBooth from './components/PhotoBooth';
 import ActualBooth from './components/ActualBooth';
-import HeartPage from './components/HeartPage';
-import BridgeSection from './components/BridgeSection';
-import Scrapbook from './components/Scrapbook';
+import FinalePage from './components/FinalePage';
 
 export default function App() {
   const [zoomDone, setZoomDone] = useState(false);
@@ -63,8 +62,6 @@ export default function App() {
   const [showActualBooth, setShowActualBooth] = useState(false);
   const [showHeartPage, setShowHeartPage] = useState(false);
   const [heartSliding, setHeartSliding] = useState(false);
-  const [showBridge, setShowBridge] = useState(false);
-  const [showScrapbook, setShowScrapbook] = useState(false);
   const p4StripImages = [
     '/moments/1.jpg', '/moments/2.jpg', '/moments/3.jpg', '/moments/4.jpg',
     '/moments/5.jpg', '/moments/6.png', '/moments/7.jpg', '/moments/8.jpg',
@@ -435,6 +432,7 @@ export default function App() {
   }
 
   function handleHeartPageOpen() {
+    startFinaleMusic(0.7);
     setBgMusicPauseTrigger(t => t + 1);
     setHeartSliding(true);
     setTimeout(() => {
@@ -444,22 +442,7 @@ export default function App() {
   }
 
   function handleHeartPageClose() {
-    setShowHeartPage(false);
-    setBgMusicResumeTrigger(t => t + 1);
-  }
-
-  function handleHeartPageComplete() {
-    setShowHeartPage(false);
-    setShowBridge(true);
-  }
-
-  function handleBridgeComplete() {
-    setShowBridge(false);
-    setShowScrapbook(true);
-  }
-
-  function handleScrapbookExit() {
-    setShowScrapbook(false);
+    stopFinaleMusic();
     setShowHeartPage(false);
     setBgMusicResumeTrigger(t => t + 1);
   }
@@ -511,7 +494,7 @@ export default function App() {
   const musicEntryP = Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen));
   const mainSliding = photoBoothSliding || heartSliding;
   const mainTransform = photoBoothSliding ? 'translateX(-100%)' : heartSliding ? 'translateX(100%)' : 'translateX(0)';
-  const mainHidden = (showLockPage || showBgPage || showPhotoBooth || showHeartPage || showBridge || showScrapbook) && !mainSliding;
+  const mainHidden = (showLockPage || showBgPage || showPhotoBooth || showHeartPage) && !mainSliding;
 
   return (
     <>
@@ -2193,11 +2176,7 @@ export default function App() {
         <ActualBooth onClose={() => setShowActualBooth(false)} />
       )}
 
-      {showHeartPage && <HeartPage onClose={handleHeartPageClose} onComplete={handleHeartPageComplete} />}
-
-      {showBridge && <BridgeSection onComplete={handleBridgeComplete} />}
-
-      {showScrapbook && <Scrapbook onExit={handleScrapbookExit} />}
+      {showHeartPage && <FinalePage onExit={handleHeartPageClose} />}
 
       {exitOverlay && <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', animation: 'fadeOut 1.5s ease forwards', pointerEvents: 'none' }} />}
     </>

@@ -385,23 +385,37 @@ body {
 }
 
 @keyframes coverOpen {
-  0% { transform: rotateY(0deg); }
-  100% { transform: rotateY(-104deg); }
+  0% { transform: translateZ(2px) rotateY(0deg); }
+  100% { transform: translateZ(2px) rotateY(-104deg); }
 }
 
 @keyframes coverClose {
-  0% { transform: rotateY(-104deg); }
-  100% { transform: rotateY(0deg); }
+  0% { transform: translateZ(2px) rotateY(-104deg); }
+  100% { transform: translateZ(2px) rotateY(0deg); }
 }
 
-@keyframes pageFlipAway {
-  0% { transform: rotateY(0deg); }
-  100% { transform: rotateY(-106deg); opacity: 0.9; }
+@keyframes pageFlip {
+  0% { transform: rotateY(0deg) rotateX(0deg) translateZ(1px); }
+  50% { transform: rotateY(-95deg) rotateX(3deg) translateZ(1px); }
+  80% { transform: rotateY(-176deg) rotateX(0deg) translateZ(1px); }
+  90% { transform: rotateY(-184deg) translateZ(1px); }
+  100% { transform: rotateY(-180deg) translateZ(1px); }
 }
 
-@keyframes sheetIn {
-  0% { transform: rotateY(55deg); opacity: 0.45; }
-  100% { transform: rotateY(0deg); opacity: 1; }
+@keyframes flipFrontShadow {
+  0% { opacity: 0; }
+  50% { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+@keyframes flipBackShadow {
+  0% { opacity: 0; }
+  50% { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+.flip-static * {
+  animation: none !important;
 }
 
 @keyframes bookShrink {
