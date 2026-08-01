@@ -121,7 +121,7 @@ export default function Hero({ onReadLetter, onRightArrowClick, onLeftArrowClick
               style={{
                 position: 'absolute',
                 top: '-22px',
-                left: '-32px',
+                right: '-32px',
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
