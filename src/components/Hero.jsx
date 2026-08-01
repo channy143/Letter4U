@@ -63,22 +63,72 @@ export default function Hero({ onReadLetter, onRightArrowClick, onLeftArrowClick
           width: '100%',
         }}
       >
-        <span
-          style={{
-            fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
-            color: 'var(--blush)',
-            opacity: 0.35,
-            userSelect: 'none',
-            lineHeight: 1,
-            flexShrink: 0,
-            cursor: 'pointer',
-            transition: 'opacity 0.3s ease',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.35'; }}
-          onClick={onLeftArrowClick}
-        >
-          &#10094;
+        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }} onClick={onLeftArrowClick}>
+          <span
+            style={{
+              fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
+              color: 'var(--blush)',
+              opacity: 0.35,
+              userSelect: 'none',
+              lineHeight: 1,
+              flexShrink: 0,
+              transition: 'opacity 0.3s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.35'; }}
+          >
+            &#10094;
+          </span>
+          <span
+            style={{
+              position: 'absolute',
+              bottom: 'calc(100% + 18px)',
+              left: 'auto',
+              right: 'calc(50% - 24px)',
+              transform: 'scale(2)',
+              transformOrigin: 'bottom right',
+              whiteSpace: 'nowrap',
+              background: 'var(--rose)',
+              color: '#fff',
+              fontFamily: "'Cormorant Garamond', serif",
+              fontStyle: 'italic',
+              fontSize: '0.75rem',
+              padding: '4px 10px',
+              borderRadius: '10px',
+              letterSpacing: '0.05em',
+              pointerEvents: 'none',
+              animation: 'fadeIn 0.4s ease',
+            }}
+          >
+            new feature!
+            <span
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: '7px',
+                left: 'auto',
+                transform: 'none',
+                width: 0,
+                height: 0,
+                borderLeft: '5px solid transparent',
+                borderRight: '5px solid transparent',
+                borderTop: '5px solid var(--rose)',
+              }}
+            />
+            <img
+              src="/moments/cat3.gif"
+              alt=""
+              style={{
+                position: 'absolute',
+                top: '-22px',
+                left: '-32px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+              }}
+            />
+          </span>
         </span>
         <h1
           style={{
