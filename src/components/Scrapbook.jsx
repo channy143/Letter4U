@@ -3,6 +3,10 @@ import { createPortal } from 'react-dom';
 import { playPaper, playThud } from '../utils/sounds';
 import { startFinaleMusic } from '../utils/music';
 
+const API_BASE = (import.meta && import.meta.env && import.meta.env.VITE_API_URL) || '';
+const fullUrl = (p) => (p && p.startsWith('http') ? p : API_BASE + p);
+const gallerySeeded = {};
+
 const AN = (d) => `itemIn 0.85s cubic-bezier(0.25, 1, 0.4, 1) ${d}s both`;
 const rot = (d) => ({ '--rot': `${d}deg` });
 
@@ -656,16 +660,45 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
   const replaceModeRef = useRef(false);
 
   useEffect(() => {
-    let alive = true;
-    loadPhotoStore().then((s) => {
-      if (alive) setItems([...(s[store] || [])]);
-    });
-    return () => {
-      alive = false;
-    };
+    refresh();
   }, [store]);
 
+  async function tryServer() {
+    try {
+      const r = await fetch(`${API_BASE}/api/gallery`);
+      if (!r.ok) throw new Error();
+      return await r.json();
+    } catch {
+      return null;
+    }
+  }
+
   async function refresh() {
+    const server = await tryServer();
+    if (server) {
+      if (start === 0 && !gallerySeeded[store] && !(server[store] || []).length) {
+        gallerySeeded[store] = true;
+        const s = await loadPhotoStore();
+        const local = s[store] || [];
+        for (const u of local) {
+          try {
+            await fetch(`${API_BASE}/api/gallery/${store}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: u }),
+            });
+          } catch {}
+        }
+      }
+      const after = await tryServer();
+      if (after) {
+        setItems(after[store] || []);
+        mutatePhotoStore((s2) => {
+          s2[store] = after[store] || [];
+        });
+        return;
+      }
+    }
     const s = await loadPhotoStore();
     setItems([...(s[store] || [])]);
   }
@@ -678,6 +711,26 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
     const url = await readAndShrink(f);
     const g = targetRef.current;
     if (url) {
+      const server = await tryServer();
+      if (server) {
+        try {
+          const body =
+            replaceModeRef.current && g != null && g < (server[store] || []).length
+              ? { url, index: g }
+              : { url };
+          const r = await fetch(`${API_BASE}/api/gallery/${store}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          if (r.ok) {
+            await refresh();
+            setPreview(null);
+            setBusy(false);
+            return;
+          }
+        } catch {}
+      }
       await mutatePhotoStore((s) => {
         const arr = s[store] || [];
         if (replaceModeRef.current && g != null && g < arr.length) {
@@ -695,6 +748,21 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
   }
 
   async function deletePhoto(g) {
+    const server = await tryServer();
+    if (server) {
+      try {
+        const r = await fetch(`${API_BASE}/api/gallery/${store}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ index: g }),
+        });
+        if (r.ok) {
+          setPreview(null);
+          await refresh();
+          return;
+        }
+      } catch {}
+    }
     await mutatePhotoStore((s) => {
       const arr = s[store] || [];
       if (g != null && g >= 0 && g < arr.length) arr.splice(g, 1);
@@ -749,7 +817,7 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
                   background: '#fdfaf2',
                 }}
               >
-                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <img src={fullUrl(img)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 <MiniTape style={{ top: -4, left: '62%' }} />
               </div>
             );
@@ -842,7 +910,7 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
             }}
           >
             <img
-              src={items[preview]}
+              src={fullUrl(items[preview])}
               alt=""
               style={{
                 maxWidth: '76vw',
