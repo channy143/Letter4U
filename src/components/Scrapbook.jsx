@@ -647,7 +647,7 @@ function EmptyFrame({ w = 250, h = 190, rotDeg = 0, style }) {
   );
 }
 
-function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo' }) {
+function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', showEmptySlot = true }) {
   const [items, setItems] = useState([]);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -709,7 +709,8 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo' }) {
   for (let p = 0; p < count; p++) {
     if (items[start + p]) filledHere++;
   }
-  const visibleCells = Math.max(1, Math.min(count, filledHere + 1));
+  const visibleCells =
+    filledHere === 0 ? (showEmptySlot ? 1 : 0) : Math.min(count, filledHere + 1);
   const btn = {
     fontFamily: "'Caveat', cursive",
     fontSize: '1.02rem',
@@ -1001,7 +1002,7 @@ function Spread1() {
       </Page>
       <Page side="right" n="4">
         <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
-          <PhotoGallery store="food" start={12} emptyLabel="Food Photo" />
+          <PhotoGallery store="food" start={12} emptyLabel="Food Photo" showEmptySlot={false} />
         </div>
       </Page>
     </>
@@ -1024,7 +1025,7 @@ function Spread2() {
       </Page>
       <Page side="right" n="6">
         <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
-          <PhotoGallery store="favorites" start={12} emptyLabel="Photo" />
+          <PhotoGallery store="favorites" start={12} emptyLabel="Photo" showEmptySlot={false} />
         </div>
         <StarDoodle size={14} rotDeg={-15} style={{ top: 12, left: 24 }} />
         <HeartDoodle size={15} rotDeg={12} style={{ top: 18, right: 26 }} />
