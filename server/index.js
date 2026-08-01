@@ -104,6 +104,10 @@ function publicUrlFor(key) {
 
 app.use('/api/uploads', express.static(UPLOADS_DIR));
 
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true });
+});
+
 app.get('/api/gallery', async (req, res) => {
   const g = await loadGallery();
   res.json({ food: g.food.map(publicUrlFor), favorites: g.favorites.map(publicUrlFor) });
