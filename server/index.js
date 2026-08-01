@@ -17,37 +17,6 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const S3_BUCKET = process.env.S3_BUCKET;
-
-const SEED_GALLERY = {
-  food: ['/scrapbook/1.jpg', '/scrapbook/2.jpg'],
-  favorites: [
-    '/scrapbook/3.jpg',
-    '/photostrip/g1.jpg',
-    '/photostrip/g2.jpg',
-    '/moments/11.jpg',
-    '/moments/12.jpg',
-    '/moments/13.jpg',
-    '/moments/5.jpg',
-    '/moments/8.jpg',
-    '/moments/9.jpg',
-    '/moments/1.jpg',
-    '/moments/2.jpg',
-    '/moments/6.png',
-    '/moments/her.png',
-    '/moments/her1.png',
-    '/moments/her3.png',
-  ],
-};
-
-function withSeeds(stored) {
-  const out = {};
-  for (const k of ['food', 'favorites']) {
-    const list = Array.isArray(stored[k]) ? stored[k] : [];
-    out[k] = [...SEED_GALLERY[k].filter((p) => !list.includes(p)), ...list];
-  }
-  return out;
-}
-
 const S3_PUBLIC_BASE =
   process.env.S3_PUBLIC_BASE || (S3_BUCKET ? `https://${S3_BUCKET}.s3.amazonaws.com` : '');
 let s3 = null;
@@ -104,18 +73,18 @@ async function loadGallery() {
     const buf = await s3Get('gallery/index.json');
     if (buf) {
       try {
-        galleryCache = withSeeds(JSON.parse(buf.toString('utf8')));
+        galleryCache = JSON.parse(buf.toString('utf8'));
         return galleryCache;
       } catch {}
     }
-    galleryCache = withSeeds({ food: [], favorites: [] });
+    galleryCache = { food: [], favorites: [] };
     return galleryCache;
   }
-  let stored = { food: [], favorites: [] };
   try {
-    stored = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  } catch {}
-  return withSeeds(stored);
+    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  } catch {
+    return { food: [], favorites: [] };
+  }
 }
 
 async function saveGallery(g) {
@@ -129,7 +98,7 @@ async function saveGallery(g) {
 
 function publicUrlFor(key) {
   if (!key) return key;
-  if (key.startsWith('http') || key.startsWith('/')) return key;
+  if (key.startsWith('http')) return key;
   if (s3) return `${S3_PUBLIC_BASE}/${key}`;
   return `/api/uploads/${path.basename(key)}`;
 }

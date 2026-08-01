@@ -3,14 +3,7 @@ import { createPortal } from 'react-dom';
 import { playPaper, playThud } from '../utils/sounds';
 import { startFinaleMusic } from '../utils/music';
 
-const API_BASE = (import.meta && import.meta.env && import.meta.env.VITE_API_URL) || '';
-const fullUrl = (p) => {
-  if (!p) return p;
-  if (p.startsWith('http')) return p;
-  if (p.startsWith('/api/')) return API_BASE + p;
-  return p;
-};
-const gallerySeeded = {};
+const fullUrl = (p) => p;
 
 const SEED_GALLERY = {
   food: ['/scrapbook/1.jpg', '/scrapbook/2.jpg'],
@@ -450,84 +443,6 @@ function Polaroid({ src, w, h, tape, tapePos, back, style, blank }) {
   );
 }
 
-const PHOTO_DB = 'scrapbook-photos';
-const PHOTO_STORE = 'galleries';
-const PHOTO_KEY = 'all';
-let photoDbPromise = null;
-let photoCache = null;
-
-function openPhotoDb() {
-  if (!('indexedDB' in window)) return Promise.reject(new Error('no idb'));
-  if (!photoDbPromise) {
-    photoDbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open(PHOTO_DB, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(PHOTO_STORE);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
-  return photoDbPromise;
-}
-
-async function loadPhotoStore() {
-  if (photoCache) return photoCache;
-  try {
-    const db = await openPhotoDb();
-    photoCache = await new Promise((resolve) => {
-      const tx = db.transaction(PHOTO_STORE, 'readonly');
-      const get = tx.objectStore(PHOTO_STORE).get(PHOTO_KEY);
-      get.onsuccess = () => resolve(get.result || { food: [], favorites: [] });
-      get.onerror = () => resolve({ food: [], favorites: [] });
-    });
-  } catch {
-    photoCache = { food: [], favorites: [] };
-  }
-  return photoCache;
-}
-
-async function mutatePhotoStore(fn) {
-  const s = await loadPhotoStore();
-  fn(s);
-  try {
-    const db = await openPhotoDb();
-    await new Promise((resolve) => {
-      const tx = db.transaction(PHOTO_STORE, 'readwrite');
-      tx.objectStore(PHOTO_STORE).put(s, PHOTO_KEY);
-      tx.oncomplete = resolve;
-      tx.onerror = () => resolve();
-    });
-  } catch {
-    return s;
-  }
-  return s;
-}
-
-function readAndShrink(file) {
-  return new Promise((resolve) => {
-    const fr = new FileReader();
-    fr.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX = 1000;
-        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = Math.max(1, Math.round(img.width * scale));
-        c.height = Math.max(1, Math.round(img.height * scale));
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        try {
-          resolve(c.toDataURL('image/webp', 0.85));
-        } catch {
-          resolve(c.toDataURL('image/jpeg', 0.85));
-        }
-      };
-      img.onerror = () => resolve(fr.result);
-      img.src = fr.result;
-    };
-    fr.onerror = () => resolve(null);
-    fr.readAsDataURL(file);
-  });
-}
-
 function MiniTape({ rotDeg = 0, style }) {
   return (
     <div
@@ -678,131 +593,22 @@ function EmptyFrame({ w = 250, h = 190, rotDeg = 0, style }) {
 }
 
 function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', showEmptySlot = true }) {
-  const [items, setItems] = useState([]);
+  const [items] = useState(() => [...(SEED_GALLERY[store] || [])]);
   const [preview, setPreview] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const fileRef = useRef(null);
-  const targetRef = useRef(null);
-  const replaceModeRef = useRef(false);
+  const [msg, setMsg] = useState(null);
+  const msgTimerRef = useRef(null);
 
-  useEffect(() => {
-    refresh();
-  }, [store]);
+  useEffect(
+    () => () => {
+      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    },
+    []
+  );
 
-  async function tryServer() {
-    try {
-      const r = await fetch(`${API_BASE}/api/gallery`);
-      if (!r.ok) throw new Error();
-      return await r.json();
-    } catch {
-      return null;
-    }
-  }
-
-  async function refresh() {
-    const server = await tryServer();
-    if (server) {
-      if (start === 0 && !gallerySeeded[store] && !(server[store] || []).length) {
-        gallerySeeded[store] = true;
-        const s = await loadPhotoStore();
-        const local = s[store] || [];
-        for (const u of local) {
-          try {
-            await fetch(`${API_BASE}/api/gallery/${store}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url: u }),
-            });
-          } catch {}
-        }
-      }
-      const after = await tryServer();
-      if (after) {
-        setItems(after[store] || []);
-        mutatePhotoStore((s2) => {
-          s2[store] = after[store] || [];
-        });
-        return;
-      }
-    }
-    const s = await loadPhotoStore();
-    let local = s[store] || [];
-    if (!local.length && !gallerySeeded[store]) {
-      gallerySeeded[store] = true;
-      await mutatePhotoStore((x) => {
-        x[store] = SEED_GALLERY[store] || [];
-      });
-      local = (await loadPhotoStore())[store] || [];
-    }
-    setItems([...local]);
-  }
-
-  async function onFile(e) {
-    const f = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!f || !f.type.startsWith('image/')) return;
-    setBusy(true);
-    const url = await readAndShrink(f);
-    const g = targetRef.current;
-    if (url) {
-      const server = await tryServer();
-      if (server) {
-        try {
-          const body =
-            replaceModeRef.current && g != null && g < (server[store] || []).length
-              ? { url, index: g }
-              : { url };
-          const r = await fetch(`${API_BASE}/api/gallery/${store}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-          if (r.ok) {
-            await refresh();
-            setPreview(null);
-            setBusy(false);
-            return;
-          }
-        } catch {}
-      }
-      await mutatePhotoStore((s) => {
-        const arr = s[store] || [];
-        if (replaceModeRef.current && g != null && g < arr.length) {
-          arr.splice(g, 1, url);
-        } else {
-          const i = g == null || g >= arr.length ? arr.length : g;
-          arr.splice(i, 0, url);
-        }
-        s[store] = arr;
-      });
-      await refresh();
-    }
-    setPreview(null);
-    setBusy(false);
-  }
-
-  async function deletePhoto(g) {
-    const server = await tryServer();
-    if (server) {
-      try {
-        const r = await fetch(`${API_BASE}/api/gallery/${store}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ index: g }),
-        });
-        if (r.ok) {
-          setPreview(null);
-          await refresh();
-          return;
-        }
-      } catch {}
-    }
-    await mutatePhotoStore((s) => {
-      const arr = s[store] || [];
-      if (g != null && g >= 0 && g < arr.length) arr.splice(g, 1);
-    });
-    setPreview(null);
-    await refresh();
+  function showBlocked() {
+    setMsg("Can't add photos for now — server problems.");
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    msgTimerRef.current = setTimeout(() => setMsg(null), 2400);
   }
 
   const ROT = [0, -2.5, 2, -1.5, 3, -3.5, 1.5, -4, 2.5, -1, 4, -2];
@@ -827,7 +633,6 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
 
   return (
     <>
-      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '124px', gap: '0.55rem', maxWidth: 420, margin: '0 auto' }}>
         {Array.from({ length: visibleCells }).map((_, p) => {
           const g = start + p;
@@ -860,11 +665,7 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
             <div
               key={g}
               className="g-slot"
-              onClick={() => {
-                replaceModeRef.current = false;
-                targetRef.current = g;
-                fileRef.current.click();
-              }}
+              onClick={showBlocked}
               style={{
                 width: '100%',
                 height: '100%',
@@ -891,7 +692,7 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
           );
         })}
       </div>
-      {busy &&
+      {msg &&
         createPortal(
           <div
             style={{
@@ -901,18 +702,19 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
               transform: 'translateX(-50%)',
               zIndex: 8900,
               fontFamily: "'Caveat', cursive",
-            fontSize: '1.05rem',
-            color: '#5a4030',
-            background: '#fdf7e8',
-            padding: '0.4rem 1.1rem',
-            borderRadius: 999,
-            boxShadow: '0 6px 18px rgba(58,42,36,0.3)',
-          }}
-        >
-          tucking the photo in...
-        </div>,
-        document.body
-      )}
+              fontSize: '1.05rem',
+              color: '#5a4030',
+              background: '#fdf7e8',
+              padding: '0.4rem 1.1rem',
+              borderRadius: 999,
+              boxShadow: '0 6px 18px rgba(58,42,36,0.3)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {msg}
+          </div>,
+          document.body
+        )}
       {preview != null && items[preview] &&
         createPortal(
           <div
@@ -956,19 +758,6 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem' }}>
-              <button
-                style={btn}
-                onClick={() => {
-                  replaceModeRef.current = true;
-                  targetRef.current = preview;
-                  fileRef.current.click();
-                }}
-              >
-                replace
-              </button>
-              <button style={btn} onClick={() => deletePhoto(preview)}>
-                delete
-              </button>
               <button style={btn} onClick={() => setPreview(null)}>
                 close
               </button>
