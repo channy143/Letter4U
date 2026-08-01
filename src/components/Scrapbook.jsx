@@ -1036,11 +1036,11 @@ function Spread0() {
           <Polaroid src="/scrapbook/2.jpg" w={186} h={146} tape tapePos={6} style={{ top: 352, right: 58, transform: 'rotate(3deg)' }} />
           <Note size="1rem" style={{ position: 'absolute', top: 514, right: 44, transform: 'rotate(1.5deg)', maxWidth: 220 }}>"I still think the milk tea tasted better because of the company."</Note>
           <TinyArrow rotDeg={-110} color="#9b3a4a" style={{ top: 486, right: 170 }} />
-          <Polaroid src="/moments/7.jpg" w={158} h={158} tape tapePos={-8} style={{ top: 200, right: 96, transform: 'rotate(-2deg)' }} />
-          <Note size="0.98rem" style={{ position: 'absolute', top: 148, right: 60, transform: 'rotate(-2deg)' }}>"One of my favorite afternoons."</Note>
+          <Polaroid src="/scrapbook/4.jpg" w={158} h={158} tape tapePos={-8} style={{ top: 200, right: 96, transform: 'rotate(-2deg)' }} />
+          <Note size="0.98rem" style={{ position: 'absolute', top: 148, right: 60, transform: 'rotate(-2deg)' }}>"You look really wonderful as always."</Note>
           <TinyArrow rotDeg={55} color="#9b3a4a" style={{ top: 182, right: 152 }} />
           <ReceiptFragment rotDeg={-3} style={{ top: 490, left: 215 }} />
-          <DateStamp text="OUR FIRST DATE" rotDeg={-5} style={{ top: 612, right: 60 }} />
+          <DateStamp text="OUR SECOND DATE" rotDeg={-5} style={{ top: 612, right: 60 }} />
           <StarDoodle size={14} style={{ top: 96, left: 64 }} />
           <StarDoodle size={11} rotDeg={25} style={{ top: 700, left: 120 }} />
           <FlowerDoodle size={30} style={{ top: 620, right: 320, transform: 'rotate(15deg)' }} />
