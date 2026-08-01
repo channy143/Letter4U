@@ -4,8 +4,34 @@ import { playPaper, playThud } from '../utils/sounds';
 import { startFinaleMusic } from '../utils/music';
 
 const API_BASE = (import.meta && import.meta.env && import.meta.env.VITE_API_URL) || '';
-const fullUrl = (p) => (p && p.startsWith('http') ? p : API_BASE + p);
+const fullUrl = (p) => {
+  if (!p) return p;
+  if (p.startsWith('http')) return p;
+  if (p.startsWith('/api/')) return API_BASE + p;
+  return p;
+};
 const gallerySeeded = {};
+
+const SEED_GALLERY = {
+  food: ['/scrapbook/1.jpg', '/scrapbook/2.jpg'],
+  favorites: [
+    '/scrapbook/3.jpg',
+    '/photostrip/g1.jpg',
+    '/photostrip/g2.jpg',
+    '/moments/11.jpg',
+    '/moments/12.jpg',
+    '/moments/13.jpg',
+    '/moments/5.jpg',
+    '/moments/8.jpg',
+    '/moments/9.jpg',
+    '/moments/1.jpg',
+    '/moments/2.jpg',
+    '/moments/6.png',
+    '/moments/her.png',
+    '/moments/her1.png',
+    '/moments/her3.png',
+  ],
+};
 
 const AN = (d) => `itemIn 0.85s cubic-bezier(0.25, 1, 0.4, 1) ${d}s both`;
 const rot = (d) => ({ '--rot': `${d}deg` });
@@ -700,7 +726,15 @@ function PhotoGallery({ store, start = 0, count = 12, emptyLabel = 'Photo', show
       }
     }
     const s = await loadPhotoStore();
-    setItems([...(s[store] || [])]);
+    let local = s[store] || [];
+    if (!local.length && !gallerySeeded[store]) {
+      gallerySeeded[store] = true;
+      await mutatePhotoStore((x) => {
+        x[store] = SEED_GALLERY[store] || [];
+      });
+      local = (await loadPhotoStore())[store] || [];
+    }
+    setItems([...local]);
   }
 
   async function onFile(e) {
