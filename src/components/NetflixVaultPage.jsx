@@ -98,6 +98,15 @@ const CHAPTER_CARDS = [
     image: '/icon/4.jpeg',
     description: 'A cinematic video journey set to "To The Bone" — featuring cycling background clips, photo polaroids, and gratitude letters.',
   },
+  {
+    id: 'scrapbook',
+    title: 'Monthsary Scrapbook',
+    episode: 'CHAPTER 5',
+    category: 'Monthsary Scrapbook',
+    duration: 'Letter & Keepsakes',
+    image: '/icon/5.jpeg',
+    description: 'A cozy handwritten binder letter celebrating our 1st monthsary — complete with photo memories, cute stickers, and loving reminders.',
+  },
 ];
 
 // Genre / Filter categories for middle bar
@@ -107,6 +116,7 @@ const CATEGORIES = [
   'Amour(French)',
   'Musika',
   'A Quite Glimpse of Us',
+  'Monthsary Scrapbook',
 ];
 
 // Canva Scrapbook tilt angles for organic paper drop
@@ -115,6 +125,7 @@ const CARD_TILTS = [
   { start: '6.5deg', mid: '-2deg', settle: '0.6deg' },
   { start: '-5.5deg', mid: '1.8deg', settle: '-0.4deg' },
   { start: '7deg', mid: '-2.2deg', settle: '0.7deg' },
+  { start: '-6deg', mid: '2deg', settle: '-0.5deg' },
 ];
 
 export default function NetflixVaultPage({ onSelectChapter }) {

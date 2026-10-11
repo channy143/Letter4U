@@ -9,10 +9,11 @@ const SEED_GALLERY = {
   food: [
     '/scrapbook/1.jpg',
     '/scrapbook/2.jpg',
-    '/scrapbook/4.jpg',
-    '/photostrip/g3.jpg',
-    '/pictures/date/a4f5bd08-84f0-46ad-8eda-dc8edf919b75.jpg',
-    '/pictures/date/ada91b64-54e2-4b31-a846-14f0a37795e9.jpg',
+    '/foods/03b74f33-7bf9-467d-9450-114191a32834.jpeg',
+    '/foods/40080067-ac69-465d-b48d-28fef0c9bea0.jpeg',
+    '/foods/48aaf95a-8526-4727-8b83-67c275209e34.jpeg',
+    '/foods/d0ed7674-1280-4906-baa8-712b39e2b587.jpeg',
+    '/foods/e7a85e35-bfb6-4574-ba58-1406bac048a2.jpeg',
   ],
   favorites: [
     '/scrapbook/3.jpg',
@@ -39,6 +40,38 @@ const SEED_GALLERY = {
     '/pictures/fav/0358b1bd-d14f-4de8-82f4-99a8ebf1af75.jpg',
     '/pictures/fav/73d3135c-3c36-47b9-957a-37dac432b8b9.jpg',
     '/pictures/fav/3aa10a1b-a6eb-4faa-b0a5-807aa3dc5da9.jpg',
+    // Row 9: College lanyard & sunny bench date
+    '/moments/3.jpg',
+    '/moments/4.jpg',
+    '/moments/7.jpg',
+    // Row 10: Sunny garden resort with plumeria & shades
+    '/pictures/her/f99290aa-ef92-443d-a717-995b9b5ad731.jpg',
+    '/pictures/her/2358d632-8b38-4563-ad0c-be8e4e3b0b13.jpg',
+    '/pictures/her/535a1b53-bee3-452c-b356-5ce668673e63.jpg',
+    // Row 11: First beach trip kisses
+    '/pictures/myfirst/058df9a5-7052-42a3-ab11-3f84a70165bd.jpg',
+    '/pictures/myfirst/a6817fb8-8a60-40ae-8eeb-309059f6a16f.jpg',
+    '/pictures/myfirst/c023845c-20a3-4793-bb67-12f0157b19ba.jpg',
+    // Row 12: Cozy cafe booth date
+    '/pictures/date/5bed5a71-fe61-4030-a721-3c6da51f2add.jpg',
+    '/pictures/date/5d76e14f-3c4e-45ee-b350-0ef8b5545c0b.jpg',
+    '/pictures/date/d67c38c6-46eb-49f3-b979-e85f56e4e4b1.jpg',
+    // Row 13: Evening park stroll with string lights
+    '/pictures/together/f4f9b37e-3bc7-45b2-82d5-4778bb1a20bd.jpg',
+    '/pictures/together/f8961480-e970-43d5-a4b6-071c025f5940.jpg',
+    '/pictures/together/f8ba29a8-a4d7-43be-b8fb-cc78bba94235.jpg',
+    // Row 14: Evening park playful kisses & expressions
+    '/pictures/together/019d3024-4de4-40a7-9dc4-b2961b290677.jpg',
+    '/pictures/together/6ade6e31-114d-4eec-b70e-7354373a942a.jpg',
+    '/pictures/together/dcde40c1-22a2-4962-95d5-8978f00d0be4.jpg',
+    // Row 15: Photobooth studio portraits
+    '/moments/booth.jpg',
+    '/moments/booth1.jpg',
+    '/pictures/fav/40c82bf2-428f-4b48-851e-08a986be77c1.jpg',
+    // Row 16: Mirror cafe date & outdoor moments
+    '/moments/16.jpg',
+    '/moments/17.jpg',
+    '/moments/together.jpg',
   ],
 };
 
@@ -942,10 +975,36 @@ function Spread2() {
   );
 }
 
-function Spread3() {
+function Spread2B() {
   return (
     <>
       <Page side="left" n="7">
+        <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
+          <div style={{ textAlign: 'center' }}>
+            <span className="scribble" style={{ fontSize: '1.7rem', color: '#5a4030' }}>More Favorite Memories</span>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '0.9rem', color: '#8a6a48', marginTop: '0.15rem' }}>Every snapshot holds a piece of us.</div>
+          </div>
+          <div style={{ marginTop: '0.8rem' }}>
+            <PhotoGallery store="favorites" start={24} emptyLabel="Photo" />
+          </div>
+        </div>
+      </Page>
+      <Page side="right" n="8">
+        <div style={{ position: 'absolute', inset: 0, padding: '26px 28px 0' }}>
+          <PhotoGallery store="favorites" start={36} emptyLabel="Photo" showEmptySlot={false} />
+        </div>
+        <StarDoodle size={14} rotDeg={15} style={{ top: 12, right: 28 }} />
+        <HeartDoodle size={15} rotDeg={-12} style={{ top: 18, left: 24 }} />
+        <MiniTape rotDeg={3} style={{ top: 700, left: '46%' }} />
+      </Page>
+    </>
+  );
+}
+
+function Spread3() {
+  return (
+    <>
+      <Page side="left" n="9">
         <span className="scribble" style={{ position: 'absolute', top: 40, left: 0, right: 0, textAlign: 'center', fontSize: '1.75rem', color: '#5a4030', lineHeight: 1.25 }}>
           Little Things I Hope
           <br />
@@ -971,7 +1030,7 @@ function Spread3() {
         <MiniTape rotDeg={5} style={{ top: 420, right: '44%' }} />
         <ButterflyDoodle size={26} rotDeg={-8} style={{ top: 330, right: 110 }} />
       </Page>
-      <Page side="right" n="8">
+      <Page side="right" n="10">
         <span className="scribble" style={{ position: 'absolute', top: 56, left: 0, right: 0, textAlign: 'center', fontSize: '1.8rem', color: '#5a4030' }}>If We Ever Read This Again...</span>
         <div style={{ position: 'absolute', top: 150, left: 80, right: 80, fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.08rem', lineHeight: 1.85, color: '#5a4030', textAlign: 'center' }}>
           <p style={{ margin: '0 0 0.7rem' }}>I don't know what this scrapbook will look like someday.</p>
@@ -997,7 +1056,7 @@ function Spread3() {
 function Spread4() {
   return (
     <>
-      <Page side="left" n="9">
+      <Page side="left" n="11">
         <div style={{ position: 'absolute', top: 150, left: '50%', marginLeft: -205, width: 410, height: 410, transform: 'rotate(1deg)' }}>
           <img
             src="/scrapbook/3.jpg"
@@ -1026,7 +1085,7 @@ function Spread4() {
         <StarDoodle size={13} rotDeg={15} style={{ top: 600, right: 110 }} />
         <CoffeeStain size={100} style={{ top: 60, left: -24, opacity: 0.45 }} />
       </Page>
-      <Page side="right" n="10">
+      <Page side="right" n="12">
         <span className="scribble" style={{ position: 'absolute', top: 46, left: 0, right: 0, textAlign: 'center', fontSize: '1.9rem', color: '#5a4030' }}>To Be Continued...</span>
         <EmptyFrame w={270} h={200} rotDeg={2} style={{ top: 130, left: '50%', marginLeft: -135 }} />
         <Note size="1.2rem" style={{ position: 'absolute', top: 372, left: 0, right: 0, textAlign: 'center' }}>Reserved for our next memory. 💗</Note>
@@ -1052,7 +1111,7 @@ function Spread4() {
   );
 }
 
-const SPREADS = [Spread0, Spread1, Spread2, Spread3, Spread4];
+const SPREADS = [Spread0, Spread1, Spread2, Spread2B, Spread3, Spread4];
 
 export default function Scrapbook({ onExit }) {
   const [bookIn, setBookIn] = useState(false);

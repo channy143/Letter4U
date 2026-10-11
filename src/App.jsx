@@ -733,6 +733,20 @@ export default function App() {
       setShowHeart3DOrbitPage(false);
       setShowVideoPage(false);
       handleHeartPageOpen();
+    } else if (chapterId === 'scrapbook') {
+      setShowMazeGame(false);
+      setShowHeartPage(false);
+      setShowWhiteMemoriesPage(false);
+      setShowHeart3DOrbitPage(false);
+      setShowVideoPage(false);
+      setShowMonthsaryScrapbookPage(true);
+      if (foundYouAudioRef.current) {
+        try {
+          foundYouAudioRef.current.currentTime = 0;
+          foundYouAudioRef.current.volume = 0.75;
+          foundYouAudioRef.current.play().catch(() => {});
+        } catch (e) {}
+      }
     }
   }
 
