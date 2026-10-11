@@ -15,6 +15,9 @@ export default defineConfig({
     }),
   ],
   server: {
+    watch: {
+      ignored: ['**/public/video/**'],
+    },
     proxy: {
       '/socket.io': {
         target: 'http://localhost:3001',

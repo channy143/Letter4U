@@ -14,11 +14,25 @@ import FlowersFall from './components/FlowersFall';
 import PhotoBooth from './components/PhotoBooth';
 import ActualBooth from './components/ActualBooth';
 import FinalePage from './components/FinalePage';
+import VideoMemoriesPage from './components/VideoMemoriesPage';
+import WhiteMemoriesPage from './components/WhiteMemoriesPage';
+import Heart3DOrbitPage from './components/Heart3DOrbitPage';
+import MonthsaryScrapbookPage from './components/MonthsaryScrapbookPage';
+import NetflixVaultPage from './components/NetflixVaultPage';
 
 export default function App() {
-  const [zoomDone, setZoomDone] = useState(false);
+  const isOurflixDefault = (() => {
+    try {
+      return localStorage.getItem('ourflix_default_home') === 'true';
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  const [zoomDone, setZoomDone] = useState(isOurflixDefault);
   const [zoomFading, setZoomFading] = useState(false);
-  const [gameDone, setGameDone] = useState(false);
+  const [introStep, setIntroStep] = useState(0); // 0: quick note, 1: black transition, 2: question, 3: response text, 4: black fade to content
+  const [gameDone, setGameDone] = useState(isOurflixDefault);
   const [showModal, setShowModal] = useState(false);
   const [amourRevealed, setAmourRevealed] = useState(false);
   const [showLockPage, setShowLockPage] = useState(false);
@@ -74,6 +88,18 @@ export default function App() {
   const scrollRef = useRef(null);
   const pasilyoRef = useRef(null);
   const pasilyoVideoRef = useRef(null);
+  const toTheBoneAudioRef = useRef(null);
+  const toTheBoneFadeRafRef = useRef(null);
+  const foundYouAudioRef = useRef(null);
+  const [showVideoPage, setShowVideoPage] = useState(false);
+  const [showWhiteMemoriesPage, setShowWhiteMemoriesPage] = useState(false);
+  const [showHeart3DOrbitPage, setShowHeart3DOrbitPage] = useState(false);
+  const [showMonthsaryScrapbookPage, setShowMonthsaryScrapbookPage] = useState(false);
+  const [showMazeGame, setShowMazeGame] = useState(false);
+  const [showNetflixVault, setShowNetflixVault] = useState(isOurflixDefault);
+  const [isVaultTransitioning, setIsVaultTransitioning] = useState(false);
+  const [vaultUnlocked, setVaultUnlocked] = useState(isOurflixDefault);
+  const [hidePetals, setHidePetals] = useState(false);
   const scrollLockRef = useRef(0);
 
   const songData = [
@@ -368,7 +394,7 @@ export default function App() {
     const v = pasilyoVideoRef.current;
     if (!v) return;
     if (songPlaying && videoLoaded) {
-      v.play().catch(() => {});
+      v.play().catch(() => { });
     } else if (!songPlaying) {
       v.pause();
     }
@@ -494,96 +520,510 @@ export default function App() {
   const musicEntryP = Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen));
   const mainSliding = photoBoothSliding || heartSliding;
   const mainTransform = photoBoothSliding ? 'translateX(-100%)' : heartSliding ? 'translateX(100%)' : 'translateX(0)';
-  const mainHidden = (showLockPage || showBgPage || showPhotoBooth || showHeartPage) && !mainSliding;
+  const mainHidden = (showLockPage || showBgPage || showPhotoBooth || showHeartPage || showVideoPage || showWhiteMemoriesPage || showHeart3DOrbitPage || showMonthsaryScrapbookPage || showNetflixVault || isVaultTransitioning || showMazeGame) && !mainSliding;
+
+  // Persist OURFLIX as default home page once visited
+  useEffect(() => {
+    if (showNetflixVault) {
+      try {
+        localStorage.setItem('ourflix_default_home', 'true');
+      } catch (e) {}
+    }
+  }, [showNetflixVault]);
+
+  // Step 0: Show quick note for ~2.2s, then fade to pitch black (Step 1)
+  useEffect(() => {
+    if (introStep === 0) {
+      const timer = setTimeout(() => {
+        setIntroStep(1); // fade quick note out
+      }, 2200);
+      return () => clearTimeout(timer);
+    }
+    if (introStep === 1) {
+      const timer = setTimeout(() => {
+        setIntroStep(2); // reveal question
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [introStep]);
+
+  // Lock document & body scrolling while intro screen is active
+  useEffect(() => {
+    if (!zoomDone) {
+      const origBodyOverflow = document.body.style.overflow;
+      const origHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = origBodyOverflow;
+        document.documentElement.style.overflow = origHtmlOverflow;
+      };
+    }
+  }, [zoomDone]);
+
+  function handleAnswerYes() {
+    setIntroStep(3); // show reply text
+    // Play tothebone.mp3 right after clicking either Yes button
+    if (toTheBoneAudioRef.current) {
+      toTheBoneAudioRef.current.volume = 0.75;
+      toTheBoneAudioRef.current.play().catch(() => { });
+    }
+  }
+
+  function handleContinueToContent() {
+    setGameDone(true); // skip game
+    setIntroStep(4);   // fade step 3 content out
+    setTimeout(() => {
+      setShowVideoPage(true); // mount video page under solid black
+      setTimeout(() => {
+        setZoomDone(true);    // remove intro screen
+      }, 300);
+    }, 700);
+  }
+
+  function fadeOutToTheBone(duration = 4500) {
+    const audio = toTheBoneAudioRef.current;
+    if (!audio || audio.paused) return;
+
+    if (toTheBoneFadeRafRef.current) {
+      cancelAnimationFrame(toTheBoneFadeRafRef.current);
+    }
+
+    const startVol = audio.volume;
+    const startTime = performance.now();
+
+    const fadeStep = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // Smooth cubic curve for natural human auditory fade
+      const factor = 1 - progress;
+      audio.volume = Math.max(0, startVol * factor * factor);
+
+      if (progress < 1 && !audio.paused) {
+        toTheBoneFadeRafRef.current = requestAnimationFrame(fadeStep);
+      } else {
+        toTheBoneFadeRafRef.current = null;
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = 0.75;
+        } catch (err) {}
+      }
+    };
+    toTheBoneFadeRafRef.current = requestAnimationFrame(fadeStep);
+  }
+
+  function handleEnterAmourFromVideo() {
+    // Ensure tothebone.mp3 has gracefully faded out
+    fadeOutToTheBone(1500);
+
+    setShowVideoPage(false);
+    setShowWhiteMemoriesPage(true);
+  }
+
+  function handlePlayFoundYou() {
+    if (foundYouAudioRef.current) {
+      try {
+        foundYouAudioRef.current.volume = 0.75;
+        foundYouAudioRef.current.currentTime = 0;
+        foundYouAudioRef.current.play().catch(() => {});
+      } catch (err) {}
+    }
+  }
+
+  function handleEnterAmourFromWhite() {
+    // Keep foundyou.mp3 playing gracefully or transition to the 3D heart page
+    setShowWhiteMemoriesPage(false);
+    setShowHeart3DOrbitPage(true);
+  }
+
+  function handleEnteringReflection() {
+    // Music and petals stay continuously playing per user request
+  }
+
+  function handleContinueFromHeart3D() {
+    setShowHeart3DOrbitPage(false);
+    setShowMonthsaryScrapbookPage(true);
+  }
+
+  function handleContinueFromScrapbook() {
+    setHidePetals(true);
+    setIsVaultTransitioning(true);
+
+    // Fade out foundyou.mp3 gracefully
+    if (foundYouAudioRef.current) {
+      const audio = foundYouAudioRef.current;
+      const startVol = audio.volume;
+      const fadeSteps = 20;
+      let step = 0;
+      const fadeInterval = setInterval(() => {
+        step++;
+        audio.volume = Math.max(0, startVol * (1 - step / fadeSteps));
+        if (step >= fadeSteps) {
+          clearInterval(fadeInterval);
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+          } catch (err) {}
+        }
+      }, 90);
+    }
+
+    // Exactly 5 seconds deep black transition before the Netflix layout appears
+    setTimeout(() => {
+      setShowMonthsaryScrapbookPage(false);
+      setShowWhiteMemoriesPage(false);
+      setShowHeart3DOrbitPage(false);
+      setShowVideoPage(false);
+      setShowNetflixVault(true);
+      setVaultUnlocked(true);
+      setIsVaultTransitioning(false);
+    }, 5000);
+  }
+
+  function handleSelectChapterFromVault(chapterId) {
+    setShowNetflixVault(false);
+    stopFinaleMusic();
+    if (foundYouAudioRef.current) {
+      try {
+        foundYouAudioRef.current.pause();
+      } catch (e) {}
+    }
+    if (toTheBoneAudioRef.current) {
+      try {
+        toTheBoneAudioRef.current.pause();
+      } catch (e) {}
+    }
+
+    if (chapterId === 'game') {
+      setShowWhiteMemoriesPage(false);
+      setShowHeart3DOrbitPage(false);
+      setShowVideoPage(false);
+      setShowHeartPage(false);
+      setShowMonthsaryScrapbookPage(false);
+      setShowMazeGame(true);
+    } else if (chapterId === 'amour') {
+      setShowMazeGame(false);
+      setShowWhiteMemoriesPage(false);
+      setShowHeart3DOrbitPage(false);
+      setShowVideoPage(false);
+      setShowHeartPage(false);
+      setShowMonthsaryScrapbookPage(false);
+      setGameDone(true);
+      setZoomDone(true);
+      setAmourRevealed(true);
+    } else if (chapterId === 'glimpse') {
+      setShowMazeGame(false);
+      setShowMonthsaryScrapbookPage(false);
+      setShowHeart3DOrbitPage(false);
+      setShowWhiteMemoriesPage(false);
+      setShowHeartPage(false);
+      setShowVideoPage(true);
+      if (toTheBoneAudioRef.current) {
+        try {
+          toTheBoneAudioRef.current.currentTime = 0;
+          toTheBoneAudioRef.current.volume = 0.75;
+          toTheBoneAudioRef.current.play().catch(() => {});
+        } catch (e) {}
+      }
+    } else if (chapterId === 'musika') {
+      setShowMazeGame(false);
+      setShowMonthsaryScrapbookPage(false);
+      setShowWhiteMemoriesPage(false);
+      setShowHeart3DOrbitPage(false);
+      setShowVideoPage(false);
+      handleHeartPageOpen();
+    }
+  }
 
   return (
     <>
-      {!gameDone && <GameIntro onComplete={handleGameComplete} />}
+      {!gameDone && !zoomDone && introStep === 0 && <GameIntro onComplete={handleGameComplete} />}
 
       {!zoomDone && (
         <div
+          className="no-scrollbar"
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 9999,
-            background: '#0d0508',
+            background: '#070204',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             textAlign: 'center',
-            padding: '2rem',
-            animation: zoomFading ? 'fadeOut 0.6s ease forwards' : 'fadeIn 0.8s ease',
+            padding: '1.5rem',
             fontFamily: "'Cormorant Garamond', serif",
-            pointerEvents: zoomFading ? 'none' : 'auto',
+            pointerEvents: introStep === 4 ? 'none' : 'auto',
+            overflowY: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
           }}
         >
-          <div style={{ maxWidth: '520px' }}>
-            <p
+          {/* STEP 0: Initial Quick Note displayed for ~2 seconds */}
+          {introStep <= 1 && (
+            <div
               style={{
-                fontFamily: "'Cinzel', serif",
-                fontSize: '0.65rem',
-                letterSpacing: '0.4em',
-                textTransform: 'uppercase',
-                color: '#b8923a',
-                marginBottom: '1.5rem',
+                maxWidth: '520px',
+                transition: 'opacity 0.7s ease, transform 0.7s ease',
+                opacity: introStep === 0 ? 1 : 0,
+                transform: introStep === 0 ? 'translateY(0)' : 'translateY(-10px)',
+                pointerEvents: introStep === 0 ? 'auto' : 'none',
               }}
             >
-              &#10038; &nbsp; a quick note &nbsp; &#10038;
-            </p>
-            <p
+              <p
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '0.65rem',
+                  letterSpacing: '0.4em',
+                  textTransform: 'uppercase',
+                  color: '#b8923a',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                &#10038; &nbsp; a quick note &nbsp; &#10038;
+              </p>
+              <p
+                style={{
+                  fontStyle: 'italic',
+                  fontSize: '1.15rem',
+                  lineHeight: 1.9,
+                  color: 'rgba(245,237,224,0.85)',
+                  marginBottom: '1rem',
+                }}
+              >
+                Kindly set your browser zoom to 125% for the best experience.
+              </p>
+              <p
+                style={{
+                  fontStyle: 'italic',
+                  fontSize: '1rem',
+                  lineHeight: 1.8,
+                  color: 'rgba(245,237,224,0.6)',
+                  marginBottom: '2.5rem',
+                }}
+              >
+                To do this, hold the <strong style={{ color: '#b8923a' }}>Ctrl</strong> button and scroll up until the zoom indicator at the top right shows 125%. Once you have the correct zoom, click continue below.
+              </p>
+              <div
+                style={{
+                  display: 'inline-block',
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.3em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(155,58,74,0.65)',
+                  border: '1px solid rgba(155,58,74,0.4)',
+                  padding: '0.8rem 2.5rem',
+                }}
+              >
+                Continue
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: The Question screen */}
+          {introStep === 2 && (
+            <div
               style={{
-                fontStyle: 'italic',
-                fontSize: '1.15rem',
-                lineHeight: 1.9,
-                color: 'rgba(245,237,224,0.85)',
-                marginBottom: '1rem',
+                maxWidth: '560px',
+                animation: 'fadeIn 0.9s ease forwards',
               }}
             >
-              Kindly set your browser zoom to 125% for the best experience.
-            </p>
-            <p
+              <p
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '0.65rem',
+                  letterSpacing: '0.45em',
+                  textTransform: 'uppercase',
+                  color: 'var(--gold, #b8923a)',
+                  marginBottom: '1.8rem',
+                  opacity: 0.85,
+                }}
+              >
+                &#10038; &nbsp; memory check &nbsp; &#10038;
+              </p>
+              <h2
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(1.6rem, 3.8vw, 2.3rem)',
+                  fontWeight: 400,
+                  color: '#f5ede0',
+                  lineHeight: 1.5,
+                  marginBottom: '2.8rem',
+                }}
+              >
+                “Do you still remember the quick note?”
+              </h2>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '2.5rem',
+                }}
+              >
+                {['YES', 'YES'].map((text, i) => (
+                  <button
+                    key={i}
+                    onClick={handleAnswerYes}
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      letterSpacing: '0.35em',
+                      textTransform: 'uppercase',
+                      color: 'var(--rose, #9b3a4a)',
+                      background: 'rgba(155, 58, 74, 0.06)',
+                      border: '1.5px solid var(--rose, #9b3a4a)',
+                      padding: '0.85rem 2.4rem',
+                      cursor: 'pointer',
+                      borderRadius: '2px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 4px 18px rgba(155, 58, 74, 0.15)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--rose, #9b3a4a)';
+                      e.currentTarget.style.color = '#f5ede0';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 24px rgba(155, 58, 74, 0.35)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(155, 58, 74, 0.06)';
+                      e.currentTarget.style.color = 'var(--rose, #9b3a4a)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 18px rgba(155, 58, 74, 0.15)';
+                    }}
+                  >
+                    {text}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: Response text after clicking YES */}
+          {(introStep === 3 || introStep === 4) && (
+            <div
+              className="no-scrollbar"
               style={{
-                fontStyle: 'italic',
-                fontSize: '1rem',
-                lineHeight: 1.8,
-                color: 'rgba(245,237,224,0.6)',
-                marginBottom: '2.5rem',
+                maxWidth: '580px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                animation: introStep === 3 ? 'fadeIn 0.9s ease forwards' : undefined,
+                transition: 'opacity 0.6s ease, transform 0.6s ease',
+                opacity: introStep === 4 ? 0 : 1,
+                transform: introStep === 4 ? 'translateY(-10px)' : 'translateY(0)',
+                padding: '0.8rem 1rem',
               }}
             >
-              To do this, hold the <strong style={{ color: '#b8923a' }}>Ctrl</strong> button and scroll up until the zoom indicator at the top right shows 125%. Once you have the correct zoom, click continue below.
-            </p>
-            <button
-              onClick={() => {
-                setZoomFading(true);
-                setTimeout(() => setZoomDone(true), 600);
-              }}
-              style={{
-                fontFamily: "'Cinzel', serif",
-                fontSize: '0.7rem',
-                letterSpacing: '0.3em',
-                textTransform: 'uppercase',
-                color: '#9b3a4a',
-                background: 'transparent',
-                border: '1px solid #9b3a4a',
-                padding: '0.8rem 2.5rem',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#9b3a4a';
-                e.currentTarget.style.color = '#f5ede0';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = '#9b3a4a';
-              }}
-            >
-              Continue
-            </button>
-          </div>
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(1.15rem, 2.2vw, 1.45rem)',
+                  color: '#f5ede0',
+                  lineHeight: 1.55,
+                  marginBottom: '1.1rem',
+                }}
+              >
+                Of course you do. Ikaw nagud na, char. It's just a walk in the park tutorial anyway.
+              </p>
+
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(1rem, 1.8vw, 1.18rem)',
+                  color: 'rgba(245, 237, 224, 0.75)',
+                  lineHeight: 1.6,
+                  marginBottom: '1.1rem',
+                }}
+              >
+                I guess it's been a while, huh?
+              </p>
+
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(1rem, 1.8vw, 1.15rem)',
+                  color: 'rgba(245, 237, 224, 0.85)',
+                  lineHeight: 1.65,
+                  marginBottom: '1.3rem',
+                }}
+              >
+                This time, let's skip the little game and go straight to the content. I'll just assume you've been frequently visiting this little website of ours, lovelove.
+              </p>
+
+              <p
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '0.72rem',
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: 'var(--gold, #b8923a)',
+                  marginBottom: '1.8rem',
+                  opacity: 0.9,
+                }}
+              >
+                So... let's continue where we left off.
+              </p>
+
+              <button
+                onClick={handleContinueToContent}
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.35em',
+                  textTransform: 'uppercase',
+                  color: 'var(--rose, #9b3a4a)',
+                  background: 'transparent',
+                  border: '1px solid var(--rose, #9b3a4a)',
+                  padding: '0.85rem 2.6rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  animation: 'fadeUp 0.8s ease 0.3s forwards',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--rose, #9b3a4a)';
+                  e.currentTarget.style.color = '#f5ede0';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--rose, #9b3a4a)';
+                }}
+              >
+                Continue &rarr;
+              </button>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Audio element for To The Bone */}
+      <audio
+        ref={toTheBoneAudioRef}
+        src="/music/tothebone.mp3"
+        preload="auto"
+        loop
+        style={{ display: 'none' }}
+      />
+
+      {/* Audio element for Found You */}
+      <audio
+        ref={foundYouAudioRef}
+        src="/music/foundyou.mp3"
+        preload="auto"
+        loop
+        style={{ display: 'none' }}
+      />
 
       <div style={{ transition: 'opacity 0.6s ease', opacity: mainSliding ? 0 : 1, pointerEvents: mainSliding ? 'none' : undefined }}>
         <PetalCanvas />
@@ -600,13 +1040,13 @@ export default function App() {
           transform: mainTransform,
         }}
       >
-          <Navbar onLetterClick={handleReadLetter} />
-          <Hero onReadLetter={handleReadLetter} onRightArrowClick={handlePhotoBoothOpen} onLeftArrowClick={handleHeartPageOpen} />
-          {showModal && <LetterModal onClose={handleCloseModal} />}
-          <QuotesSection />
-          <MomentsSection onLockClick={() => setShowLockPage(true)} />
-          <Footer />
-        </div>
+        <Navbar onLetterClick={handleReadLetter} />
+        <Hero onReadLetter={handleReadLetter} onRightArrowClick={handlePhotoBoothOpen} onLeftArrowClick={handleHeartPageOpen} />
+        {showModal && <LetterModal onClose={handleCloseModal} />}
+        <QuotesSection />
+        <MomentsSection onLockClick={() => setShowLockPage(true)} />
+        <Footer />
+      </div>
 
       {showLockPage && (
         <div
@@ -687,8 +1127,8 @@ export default function App() {
                   background: p.color,
                   borderRadius: p.round ? '50%' : '2px',
                   zIndex: 15,
-              filter: 'brightness(1.35)',
-              pointerEvents: 'none',
+                  filter: 'brightness(1.35)',
+                  pointerEvents: 'none',
                   animation: 'confettiBurst ' + p.duration + 's ' + p.delay + 's ease-out both',
                   '--dx': p.dx + 'px',
                   '--dy': p.dy + 'px',
@@ -962,7 +1402,7 @@ export default function App() {
                 )}
               </div>
             </div>
-            ) : (
+          ) : (
             <div
               style={{
                 width: '100%',
@@ -1047,7 +1487,7 @@ export default function App() {
                     fontStyle: 'italic',
                     fontWeight: 600,
                     fontSize: '1rem',
-                  color: songPlaying && videoLoaded ? 'rgba(255,255,255,0.85)' : 'var(--rose)',
+                    color: songPlaying && videoLoaded ? 'rgba(255,255,255,0.85)' : 'var(--rose)',
                     cursor: exitAnimating ? 'default' : 'pointer',
                     letterSpacing: '0.05em',
                     animation: exitAnimating ? 'fadeOut 0.4s ease 0.6s both' : 'flicker 2.5s ease-in-out infinite',
@@ -1117,155 +1557,155 @@ export default function App() {
           >
             Thank you for being you. You may not realize it, but you've brought so much happiness into my life. Some days become lighter just because I got to talk to you. Some moments become special simply because you were part of them.
           </div>
-          <div
-            style={{
-              position: 'absolute',
-              left: '52%',
-              top: '74%',
-              transform: bgExitStep >= 2 ? 'translateX(-80px) translate(-50%, -50%)' : bgRevealStep >= 3 ? 'translate(-50%, -50%)' : 'translateX(-80px) translate(-50%, -50%)',
-              width: 'min(800px, 48vw)',
-              maxHeight: 'calc(40vh)',
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: '1.6rem',
-              lineHeight: 1.8,
-              color: '#3a2a24',
-              padding: '2% 8%',
-              textAlign: 'left',
-              pointerEvents: 'none',
-              opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 3 ? 1 : 0,
-              transition: 'opacity 0.8s ease, transform 0.8s ease',
-            }}
-          >
-            Thank you for the laughs, the random conversations, the small updates about your day, and even the moments when you just stayed. Thank you for letting me get to know you, little by little.
-          </div>
-          {bgPageIndex === 0 && (
-            <span
-              onClick={() => { if (bgExitStep === 0) { setBgExitTarget('next'); setBgExitStep(1); } }}
-              style={{
-                position: 'absolute',
-                left: '50%',
-                top: '90%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 15,
-                fontFamily: "'Cormorant Garamond', serif",
-                fontStyle: 'italic',
-                fontWeight: 600,
-                fontSize: '1rem',
-                color: 'var(--rose)',
-                cursor: bgExitStep === 0 ? 'pointer' : 'default',
-                letterSpacing: '0.05em',
-                opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 3 ? 1 : 0,
-                transition: 'opacity 0.8s ease',
-                pointerEvents: bgExitStep === 0 ? 'auto' : 'none',
-              }}
-            >
-              click to continue
-            </span>
-          )}
-          <div
-            style={{
-              position: 'absolute',
-              left: '25%',
-              top: '76%',
-              transform: bgExitStep >= 2 ? 'translateY(-200vh) translate(-50%, -50%) rotate(10deg)' : bgExitStep === 1 ? 'translate(-50%, calc(-50% + 25px)) rotate(10deg)' : bgRevealStep >= 1 ? 'translate(-50%, -50%) rotate(10deg)' : 'translateY(-200vh) translate(-50%, -50%) rotate(10deg)',
-              background: '#fff',
-              padding: '0 16px 140px',
-              borderRadius: '4px',
-              boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              transition: bgExitStep === 1 ? 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' : bgExitStep >= 2 ? 'transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)' : 'transform 1.5s cubic-bezier(0.25, 1.2, 0.5, 1)',
-            }}
-          >
             <div
               style={{
-                width: 'calc(20vw - 60px)',
-                height: 'calc(40vh - 40px)',
-                overflow: 'hidden',
-                position: 'relative',
+                position: 'absolute',
+                left: '52%',
+                top: '74%',
+                transform: bgExitStep >= 2 ? 'translateX(-80px) translate(-50%, -50%)' : bgRevealStep >= 3 ? 'translate(-50%, -50%)' : 'translateX(-80px) translate(-50%, -50%)',
+                width: 'min(800px, 48vw)',
+                maxHeight: 'calc(40vh)',
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: '1.6rem',
+                lineHeight: 1.8,
+                color: '#3a2a24',
+                padding: '2% 8%',
+                textAlign: 'left',
+                pointerEvents: 'none',
+                opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 3 ? 1 : 0,
+                transition: 'opacity 0.8s ease, transform 0.8s ease',
+              }}
+            >
+              Thank you for the laughs, the random conversations, the small updates about your day, and even the moments when you just stayed. Thank you for letting me get to know you, little by little.
+            </div>
+            {bgPageIndex === 0 && (
+              <span
+                onClick={() => { if (bgExitStep === 0) { setBgExitTarget('next'); setBgExitStep(1); } }}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '90%',
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 15,
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: 'italic',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  color: 'var(--rose)',
+                  cursor: bgExitStep === 0 ? 'pointer' : 'default',
+                  letterSpacing: '0.05em',
+                  opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 3 ? 1 : 0,
+                  transition: 'opacity 0.8s ease',
+                  pointerEvents: bgExitStep === 0 ? 'auto' : 'none',
+                }}
+              >
+                click to continue
+              </span>
+            )}
+            <div
+              style={{
+                position: 'absolute',
+                left: '25%',
+                top: '76%',
+                transform: bgExitStep >= 2 ? 'translateY(-200vh) translate(-50%, -50%) rotate(10deg)' : bgExitStep === 1 ? 'translate(-50%, calc(-50% + 25px)) rotate(10deg)' : bgRevealStep >= 1 ? 'translate(-50%, -50%) rotate(10deg)' : 'translateY(-200vh) translate(-50%, -50%) rotate(10deg)',
+                background: '#fff',
+                padding: '0 16px 140px',
+                borderRadius: '4px',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                transition: bgExitStep === 1 ? 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' : bgExitStep >= 2 ? 'transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)' : 'transform 1.5s cubic-bezier(0.25, 1.2, 0.5, 1)',
+              }}
+            >
+              <div
+                style={{
+                  width: 'calc(20vw - 60px)',
+                  height: 'calc(40vh - 40px)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}
+              >
+                <img
+                  src="/moments/11.jpg"
+                  alt=""
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    width: '100%',
+                    height: '120%',
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                background: '#fff',
+                padding: '0 16px 140px',
+                borderRadius: '4px',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                marginLeft: '800px',
+                transform: bgExitStep >= 2 ? 'translateY(calc(-70px - 200vh)) rotate(-10deg)' : bgExitStep === 1 ? 'translateY(calc(-70px + 25px)) rotate(-10deg)' : bgRevealStep >= 1 ? 'translateY(-70px) rotate(-10deg)' : 'translateY(calc(-70px - 200vh)) rotate(-10deg)',
+                transition: bgExitStep === 1 ? 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' : bgExitStep >= 2 ? 'transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)' : 'transform 1.5s cubic-bezier(0.25, 1.2, 0.5, 1)',
               }}
             >
               <img
-                src="/moments/11.jpg"
+                src="/moments/13 - Copy.jpg"
                 alt=""
                 style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  width: '100%',
-                  height: '120%',
-                  objectFit: 'cover',
-                  objectPosition: 'center',
+                  display: 'block',
+                  maxWidth: 'calc(48vw - 60px)',
+                  maxHeight: 'calc(48vh - 60px)',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
                 }}
               />
             </div>
-          </div>
-          <div
-            style={{
-              background: '#fff',
-              padding: '0 16px 140px',
-              borderRadius: '4px',
-              boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              marginLeft: '800px',
-              transform: bgExitStep >= 2 ? 'translateY(calc(-70px - 200vh)) rotate(-10deg)' : bgExitStep === 1 ? 'translateY(calc(-70px + 25px)) rotate(-10deg)' : bgRevealStep >= 1 ? 'translateY(-70px) rotate(-10deg)' : 'translateY(calc(-70px - 200vh)) rotate(-10deg)',
-              transition: bgExitStep === 1 ? 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' : bgExitStep >= 2 ? 'transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)' : 'transform 1.5s cubic-bezier(0.25, 1.2, 0.5, 1)',
-            }}
-          >
             <img
-              src="/moments/13 - Copy.jpg"
+              src="/moments/cat6.gif"
               alt=""
               style={{
-                display: 'block',
-                maxWidth: 'calc(48vw - 60px)',
-                maxHeight: 'calc(48vh - 60px)',
+                position: 'absolute',
+                left: 'calc(5% + 970px)',
+                bottom: '24%',
                 width: 'auto',
-                height: 'auto',
+                height: '250px',
+                borderRadius: '12px',
                 objectFit: 'contain',
+                clipPath: 'inset(20% 0 0 0)',
+                opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 2 ? 1 : 0,
+                transition: 'opacity 0.7s ease',
               }}
             />
-          </div>
-          <img
-            src="/moments/cat6.gif"
-            alt=""
-            style={{
-              position: 'absolute',
-              left: 'calc(5% + 970px)',
-              bottom: '24%',
-              width: 'auto',
-              height: '250px',
-              borderRadius: '12px',
-              objectFit: 'contain',
-              clipPath: 'inset(20% 0 0 0)',
-              opacity: bgExitStep >= 2 ? 0 : bgRevealStep >= 2 ? 1 : 0,
-              transition: 'opacity 0.7s ease',
-            }}
-          />
-          <button
-            onClick={() => { if (bgExitStep === 0) { setBgExitTarget('close'); setBgExitStep(1); } }}
-            style={{
-              position: 'absolute',
-              top: '1.5rem',
-              right: '2rem',
-              zIndex: 10,
-              fontFamily: "'Cinzel', serif",
-              fontSize: '1.5rem',
-              color: '#fff',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              opacity: bgExitStep === 0 ? 0.5 : 0,
-              transition: 'opacity 0.3s ease',
-              textShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              pointerEvents: bgExitStep === 0 ? 'auto' : 'none',
-            }}
-            onMouseEnter={(e) => { if (bgExitStep === 0) e.currentTarget.style.opacity = 1; }}
-            onMouseLeave={(e) => { if (bgExitStep === 0) e.currentTarget.style.opacity = 0.5; }}
-          >
-            &#10005;
-          </button>
+            <button
+              onClick={() => { if (bgExitStep === 0) { setBgExitTarget('close'); setBgExitStep(1); } }}
+              style={{
+                position: 'absolute',
+                top: '1.5rem',
+                right: '2rem',
+                zIndex: 10,
+                fontFamily: "'Cinzel', serif",
+                fontSize: '1.5rem',
+                color: '#fff',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                opacity: bgExitStep === 0 ? 0.5 : 0,
+                transition: 'opacity 0.3s ease',
+                textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                pointerEvents: bgExitStep === 0 ? 'auto' : 'none',
+              }}
+              onMouseEnter={(e) => { if (bgExitStep === 0) e.currentTarget.style.opacity = 1; }}
+              onMouseLeave={(e) => { if (bgExitStep === 0) e.currentTarget.style.opacity = 0.5; }}
+            >
+              &#10005;
+            </button>
           </>}
           {bgPageIndex === 1 && (
             <>
@@ -1344,7 +1784,7 @@ export default function App() {
                       top: topPositions[i] + '%',
                       transform: t,
                       background: '#fff',
-                      padding: '8px 8px 40px 8px', 
+                      padding: '8px 8px 40px 8px',
                       borderRadius: '3px',
                       boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
                       display: 'flex',
@@ -1510,370 +1950,370 @@ export default function App() {
                   I want you to know that my care for you isn't only there during the good days. It's there during the quiet days, the messy days, and the days when you feel like disappearing from everyone else.
                 </div>
 
-              {/* Sticky Notes Section */}
-              <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '2rem 1.5rem',
-                maxWidth: '900px',
-                margin: '0 auto',
-                width: '100%',
-                opacity: Math.max(0, Math.min(1, (scrollY - (stickyTop - fadeLen)) / fadeLen)) - Math.max(0, Math.min(1, (scrollY - (boxTop - fadeLen)) / fadeLen)),
-                transform: `translateY(${30 * (1 - Math.max(0, Math.min(1, (scrollY - (stickyTop - fadeLen)) / fadeLen)))}px)`,
-                transition: 'none',
-              }}>
-                <h3 style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.2rem, 2.2vw, 1.6rem)', color: '#3a2a24', textAlign: 'center', marginBottom: '0.3rem' }}>
-                  Little Reminders, Just for You
-                </h3>
-                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.15rem', color: '#7a6a64', textAlign: 'center', marginBottom: '1.5rem' }}>
-                  Six little notes. Open them whenever you need a smile.
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', width: '100%' }}>
-                  {stickyNotes.map((note, i) => (
-                    <div
-                      key={i}
-                      onClick={() => setStickyFlipped(prev => { const n = [...prev]; n[i] = !n[i]; return n; })}
-                      style={{ perspective: '800px', height: '200px', cursor: 'pointer', transform: `rotate(${noteRotations[i]}deg)` }}
-                    >
-                      <div style={{
-                        width: '100%',
-                        height: '100%',
-                        position: 'relative',
-                        transformStyle: 'preserve-3d',
-                        transition: 'transform 0.6s ease',
-                        transform: stickyFlipped[i] ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                      }}>
+                {/* Sticky Notes Section */}
+                <div style={{
+                  minHeight: '100vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2rem 1.5rem',
+                  maxWidth: '900px',
+                  margin: '0 auto',
+                  width: '100%',
+                  opacity: Math.max(0, Math.min(1, (scrollY - (stickyTop - fadeLen)) / fadeLen)) - Math.max(0, Math.min(1, (scrollY - (boxTop - fadeLen)) / fadeLen)),
+                  transform: `translateY(${30 * (1 - Math.max(0, Math.min(1, (scrollY - (stickyTop - fadeLen)) / fadeLen)))}px)`,
+                  transition: 'none',
+                }}>
+                  <h3 style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.2rem, 2.2vw, 1.6rem)', color: '#3a2a24', textAlign: 'center', marginBottom: '0.3rem' }}>
+                    Little Reminders, Just for You
+                  </h3>
+                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.15rem', color: '#7a6a64', textAlign: 'center', marginBottom: '1.5rem' }}>
+                    Six little notes. Open them whenever you need a smile.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', width: '100%' }}>
+                    {stickyNotes.map((note, i) => (
+                      <div
+                        key={i}
+                        onClick={() => setStickyFlipped(prev => { const n = [...prev]; n[i] = !n[i]; return n; })}
+                        style={{ perspective: '800px', height: '200px', cursor: 'pointer', transform: `rotate(${noteRotations[i]}deg)` }}
+                      >
                         <div style={{
-                          position: 'absolute',
-                          inset: 0,
-                          backfaceVisibility: 'hidden',
-                          background: 'linear-gradient(135deg, #fdf6ed, #f5ede0)',
-                          borderRadius: '10px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '0.7rem',
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-                          border: '1px solid rgba(184,146,58,0.2)',
+                          width: '100%',
+                          height: '100%',
+                          position: 'relative',
+                          transformStyle: 'preserve-3d',
+                          transition: 'transform 0.6s ease',
+                          transform: stickyFlipped[i] ? 'rotateY(180deg)' : 'rotateY(0deg)',
                         }}>
                           <div style={{
                             position: 'absolute',
-                            top: '-4px',
-                            left: '15%',
-                            width: '70%',
-                            height: '12px',
-                            background: `linear-gradient(90deg, ${['#f4a4c8','#a8d8ea','#c8e6c9','#ffcc80','#ce93d8','#ef9a9a'][i]}, ${['#f06292','#4fc3f7','#81c784','#ffb74d','#ab47bc','#e57373'][i]})`,
-                            borderRadius: '2px',
-                            opacity: 0.75,
-                            zIndex: 2,
-                          }} />
-                          <span style={{ fontSize: '1.8rem', marginBottom: '0.2rem' }}>{note.emoji}</span>
-                          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '0.8rem', color: '#7a6a64' }}>click me!</span>
-                        </div>
-                        <div style={{
-                          position: 'absolute',
-                          inset: 0,
-                          backfaceVisibility: 'hidden',
-                          transform: 'rotateY(180deg)',
-                          background: 'linear-gradient(135deg, #fff8e7, #fdf6ed)',
-                          borderRadius: '10px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '0.7rem',
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-                          border: '1px solid rgba(184,146,58,0.2)',
-                        }}>
-                          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.9rem', color: '#3a2a24', textAlign: 'center', lineHeight: 1.5 }}>{note.text}</span>
+                            inset: 0,
+                            backfaceVisibility: 'hidden',
+                            background: 'linear-gradient(135deg, #fdf6ed, #f5ede0)',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0.7rem',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                            border: '1px solid rgba(184,146,58,0.2)',
+                          }}>
+                            <div style={{
+                              position: 'absolute',
+                              top: '-4px',
+                              left: '15%',
+                              width: '70%',
+                              height: '12px',
+                              background: `linear-gradient(90deg, ${['#f4a4c8', '#a8d8ea', '#c8e6c9', '#ffcc80', '#ce93d8', '#ef9a9a'][i]}, ${['#f06292', '#4fc3f7', '#81c784', '#ffb74d', '#ab47bc', '#e57373'][i]})`,
+                              borderRadius: '2px',
+                              opacity: 0.75,
+                              zIndex: 2,
+                            }} />
+                            <span style={{ fontSize: '1.8rem', marginBottom: '0.2rem' }}>{note.emoji}</span>
+                            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '0.8rem', color: '#7a6a64' }}>click me!</span>
+                          </div>
+                          <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            backfaceVisibility: 'hidden',
+                            transform: 'rotateY(180deg)',
+                            background: 'linear-gradient(135deg, #fff8e7, #fdf6ed)',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0.7rem',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                            border: '1px solid rgba(184,146,58,0.2)',
+                          }}>
+                            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.9rem', color: '#3a2a24', textAlign: 'center', lineHeight: 1.5 }}>{note.text}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <div style={{ marginTop: '1.5rem', fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1rem', color: '#7a6a64', textAlign: 'center' }}>
+                    {flippedCount === 6 ? (
+                      <span>&#x1F48C; All reminders opened</span>
+                    ) : (
+                      <span>&#x1F48C; {flippedCount} / 6 opened</span>
+                    )}
+                  </div>
                 </div>
-                <div style={{ marginTop: '1.5rem', fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1rem', color: '#7a6a64', textAlign: 'center' }}>
-                  {flippedCount === 6 ? (
-                    <span>&#x1F48C; All reminders opened</span>
-                  ) : (
-                    <span>&#x1F48C; {flippedCount} / 6 opened</span>
-                  )}
-                </div>
-              </div>
 
-              {/* Box Section */}
-              <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '2rem 1.5rem',
-                maxWidth: '900px',
-                margin: '0 auto',
-                width: '100%',
-                textAlign: 'center',
-                opacity: Math.max(0, Math.min(1, (scrollY - (boxTop - fadeLen)) / fadeLen)) - Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen)),
-                transform: `translateY(${30 * (1 - Math.max(0, Math.min(1, (scrollY - (boxTop - fadeLen)) / fadeLen)))}px)`,
-                transition: 'none',
-              }}>
-                <h3 style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', color: '#3a2a24', marginBottom: '0.0rem' }}>
-                  A Little Box I Made for You
-                </h3>
-                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.15rem', color: '#7a6a64', marginBottom: '0rem' }}>
-                  Open it whenever you need a little reminder.
-                </p>
-                <div
-                  onClick={() => setBoxOpen(true)}
-                  style={{
-                    display: 'inline-flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0px',
-                    cursor: 'pointer',
-                    transition: 'transform 0.3s ease',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <img src="/moments/box.png" alt="Open the box" style={{ width: '400px', height: 'auto', display: 'block', animation: 'jiggle 2s ease-in-out infinite' }} />
-                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.5rem', color: '#3a2a24', marginTop: '-6px' }}>
-                    tap to open
-                  </span>
-                </div>
-              </div>
-
-              <audio ref={pasilyoRef} src={songData[currentSongIndex].audio} loop preload="auto" />
-
-              {/* Music Player Section */}
-              <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '2rem 1.5rem',
-                maxWidth: '900px',
-                margin: '0 auto',
-                width: '100%',
-                opacity: Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen)),
-                transform: `translateY(${30 * (1 - Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen)))}px)`,
-                transition: 'none',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3rem', width: '100%' }}>
-                  <div style={{ flex: 1, textAlign: 'right', transform: p3ExitStep >= 1 ? 'translateX(-250px)' : `translateX(${(1 - musicEntryP) * -200}px)`, opacity: p3ExitStep >= 1 ? 0 : 1, transition: p3ExitStep >= 1 ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease' : 'none' }}>
-                    <h2
-                      style={{
-                        fontFamily: "'Libre Baskerville', serif",
-                        fontStyle: 'italic',
-                        fontSize: 'clamp(3.0rem, 2.2vw, 1.8rem)',
-                        color: songPlaying ? '#fff' : '#3a2a24',
-                        lineHeight: 1.5,
-                        fontWeight: 400,
-                        opacity: songPlaying ? 0 : 1,
-                        textShadow: songPlaying
-                          ? '0 0 30px rgba(255,255,255,0.8), 0 0 60px rgba(255,255,255,0.5), 0 0 100px rgba(255,255,255,0.3)'
-                          : 'none',
-                        transition: 'opacity 0.5s ease, color 0.6s ease',
-                      }}
-                    >
-                      These are the songs that reminds me of you
-                    </h2>
-                    </div>
-
+                {/* Box Section */}
+                <div style={{
+                  minHeight: '100vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2rem 1.5rem',
+                  maxWidth: '900px',
+                  margin: '0 auto',
+                  width: '100%',
+                  textAlign: 'center',
+                  opacity: Math.max(0, Math.min(1, (scrollY - (boxTop - fadeLen)) / fadeLen)) - Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen)),
+                  transform: `translateY(${30 * (1 - Math.max(0, Math.min(1, (scrollY - (boxTop - fadeLen)) / fadeLen)))}px)`,
+                  transition: 'none',
+                }}>
+                  <h3 style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', color: '#3a2a24', marginBottom: '0.0rem' }}>
+                    A Little Box I Made for You
+                  </h3>
+                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.15rem', color: '#7a6a64', marginBottom: '0rem' }}>
+                    Open it whenever you need a little reminder.
+                  </p>
                   <div
+                    onClick={() => setBoxOpen(true)}
                     style={{
-                      flex: '0 0 450px',
-                      height: '380px',
-                      position: 'relative',
-                      background: 'linear-gradient(160deg, #1a1a2e 0%, #16213e 100%)',
-                      borderRadius: '14px',
-                      padding: '1.2rem',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
-                      color: '#fff',
-                      overflow: 'visible',
-                      transform: p3ExitStep >= 1 ? 'translateX(300px)' : `translateX(${(1 - musicEntryP) * 200}px)`,
-                      opacity: p3ExitStep >= 1 ? 0 : 1,
-                      transition: p3ExitStep >= 1 ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease' : 'none',
+                      display: 'inline-flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.3s ease',
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        right: 'calc(100% + 2rem)',
-                        top: '50%',
-                        transform: songPlaying ? 'translateY(-50%) translateX(0) rotate(-1deg)' : 'translateY(-50%) translateX(20px) rotate(0deg)',
-                        width: '290px',
-                        background: '#fdf8f0',
-                        borderRadius: '3px',
-                        padding: '1.6rem 1.8rem',
-                        boxShadow: '0 6px 24px rgba(0,0,0,0.12)',
-                        opacity: songPlaying ? 1 : 0,
-                        pointerEvents: songPlaying ? 'auto' : 'none',
-                        transition: 'transform 0.7s cubic-bezier(0.25, 1.2, 0.5, 1), opacity 0.5s ease',
-                        zIndex: 5,
-                      }}
-                    >
-                      <div style={{ position: 'absolute', top: 0, right: 0, width: 0, height: 0, borderStyle: 'solid', borderWidth: '0 26px 26px 0', borderColor: 'transparent #e4d5c0 transparent transparent' }} />
-                      <div style={{ fontFamily: "'Cormorant Garamond', serif", color: '#000', fontSize: '0.95rem', lineHeight: 1.75 }}>
-                        {letterContent[currentSongIndex].emoji && (
-                          <div style={{ fontSize: '1.7rem', marginBottom: '0.3rem' }}>{letterContent[currentSongIndex].emoji}</div>
-                        )}
-                        <div style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: '1.1rem', fontWeight: 600, color: '#000', marginBottom: '0.5rem' }}>
-                          {letterContent[currentSongIndex].subtitle}
-                        </div>
-                        <div style={{ color: '#000', fontWeight: 400 }}>
-                          {letterContent[currentSongIndex].body}
-                        </div>
-                      </div>
-                    </div>
-                    <img
-                      src={songData[currentSongIndex].gif}
-                      alt=""
-                      style={{
-                        position: 'absolute',
-                        bottom: '-20px',
-                        right: '-90px',
-                        width: '240px',
-                        height: '240px',
-                        borderRadius: '8px',
-                        objectFit: 'cover',
-                        pointerEvents: 'none',
-                        zIndex: 3,
-                      }}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '0.8rem' }}>
-                      <img
-                        src={songData[currentSongIndex].image}
-                        alt=""
+                    <img src="/moments/box.png" alt="Open the box" style={{ width: '400px', height: 'auto', display: 'block', animation: 'jiggle 2s ease-in-out infinite' }} />
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '1.5rem', color: '#3a2a24', marginTop: '-6px' }}>
+                      tap to open
+                    </span>
+                  </div>
+                </div>
+
+                <audio ref={pasilyoRef} src={songData[currentSongIndex].audio} loop preload="auto" />
+
+                {/* Music Player Section */}
+                <div style={{
+                  minHeight: '100vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2rem 1.5rem',
+                  maxWidth: '900px',
+                  margin: '0 auto',
+                  width: '100%',
+                  opacity: Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen)),
+                  transform: `translateY(${30 * (1 - Math.max(0, Math.min(1, (scrollY - (musicTop - fadeLen)) / fadeLen)))}px)`,
+                  transition: 'none',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '3rem', width: '100%' }}>
+                    <div style={{ flex: 1, textAlign: 'right', transform: p3ExitStep >= 1 ? 'translateX(-250px)' : `translateX(${(1 - musicEntryP) * -200}px)`, opacity: p3ExitStep >= 1 ? 0 : 1, transition: p3ExitStep >= 1 ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease' : 'none' }}>
+                      <h2
                         style={{
-                          width: '250px',
-                          height: '250px',
-                          borderRadius: '6px',
-                          objectFit: 'cover',
-                          display: 'block',
+                          fontFamily: "'Libre Baskerville', serif",
+                          fontStyle: 'italic',
+                          fontSize: 'clamp(3.0rem, 2.2vw, 1.8rem)',
+                          color: songPlaying ? '#fff' : '#3a2a24',
+                          lineHeight: 1.5,
+                          fontWeight: 400,
+                          opacity: songPlaying ? 0 : 1,
+                          textShadow: songPlaying
+                            ? '0 0 30px rgba(255,255,255,0.8), 0 0 60px rgba(255,255,255,0.5), 0 0 100px rgba(255,255,255,0.3)'
+                            : 'none',
+                          transition: 'opacity 0.5s ease, color 0.6s ease',
                         }}
-                      />
-                      <div>
-                        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1rem', fontWeight: 600 }}>{songData[currentSongIndex].title}</div>
-                        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{songData[currentSongIndex].artist}</div>
-                      </div>
+                      >
+                        These are the songs that reminds me of you
+                      </h2>
                     </div>
+
                     <div
                       style={{
-                        width: '100%',
-                        height: '3px',
-                        background: 'rgba(255,255,255,0.15)',
-                        borderRadius: '2px',
-                        marginBottom: '0.8rem',
+                        flex: '0 0 450px',
+                        height: '380px',
+                        position: 'relative',
+                        background: 'linear-gradient(160deg, #1a1a2e 0%, #16213e 100%)',
+                        borderRadius: '14px',
+                        padding: '1.2rem',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+                        color: '#fff',
+                        overflow: 'visible',
+                        transform: p3ExitStep >= 1 ? 'translateX(300px)' : `translateX(${(1 - musicEntryP) * 200}px)`,
+                        opacity: p3ExitStep >= 1 ? 0 : 1,
+                        transition: p3ExitStep >= 1 ? 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease' : 'none',
                       }}
                     >
                       <div
                         style={{
-                          width: songPlaying ? '45%' : '0%',
-                          height: '100%',
-                          background: '#1db954',
-                          borderRadius: '2px',
-                          transition: 'width 0.3s linear',
+                          position: 'absolute',
+                          right: 'calc(100% + 2rem)',
+                          top: '50%',
+                          transform: songPlaying ? 'translateY(-50%) translateX(0) rotate(-1deg)' : 'translateY(-50%) translateX(20px) rotate(0deg)',
+                          width: '290px',
+                          background: '#fdf8f0',
+                          borderRadius: '3px',
+                          padding: '1.6rem 1.8rem',
+                          boxShadow: '0 6px 24px rgba(0,0,0,0.12)',
+                          opacity: songPlaying ? 1 : 0,
+                          pointerEvents: songPlaying ? 'auto' : 'none',
+                          transition: 'transform 0.7s cubic-bezier(0.25, 1.2, 0.5, 1), opacity 0.5s ease',
+                          zIndex: 5,
+                        }}
+                      >
+                        <div style={{ position: 'absolute', top: 0, right: 0, width: 0, height: 0, borderStyle: 'solid', borderWidth: '0 26px 26px 0', borderColor: 'transparent #e4d5c0 transparent transparent' }} />
+                        <div style={{ fontFamily: "'Cormorant Garamond', serif", color: '#000', fontSize: '0.95rem', lineHeight: 1.75 }}>
+                          {letterContent[currentSongIndex].emoji && (
+                            <div style={{ fontSize: '1.7rem', marginBottom: '0.3rem' }}>{letterContent[currentSongIndex].emoji}</div>
+                          )}
+                          <div style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: '1.1rem', fontWeight: 600, color: '#000', marginBottom: '0.5rem' }}>
+                            {letterContent[currentSongIndex].subtitle}
+                          </div>
+                          <div style={{ color: '#000', fontWeight: 400 }}>
+                            {letterContent[currentSongIndex].body}
+                          </div>
+                        </div>
+                      </div>
+                      <img
+                        src={songData[currentSongIndex].gif}
+                        alt=""
+                        style={{
+                          position: 'absolute',
+                          bottom: '-20px',
+                          right: '-90px',
+                          width: '240px',
+                          height: '240px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                          pointerEvents: 'none',
+                          zIndex: 3,
                         }}
                       />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); prevSong(); }}
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          background: '#666',
-                          border: 'none',
-                          color: '#fff',
-                          fontSize: '0.85rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#1db954'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#666'; e.currentTarget.style.transform = 'scale(1)'; }}
-                      >
-                        &#9664;
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); togglePasilyo(); }}
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          background: '#1db954',
-                          border: 'none',
-                          color: '#fff',
-                          fontSize: '1rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'transform 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-                      >
-                        {songPlaying ? (
-                          <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
-                            <rect x="1" y="1" width="3.5" height="12" rx="0.5" />
-                            <rect x="7.5" y="1" width="3.5" height="12" rx="0.5" />
-                          </svg>
-                        ) : (
-                          <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
-                            <path d="M2 1 L11 7 L2 13 Z" />
-                          </svg>
-                        )}
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); nextSong(); }}
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          background: '#666',
-                          border: 'none',
-                          color: '#fff',
-                          fontSize: '0.85rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#1db954'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#666'; e.currentTarget.style.transform = 'scale(1)'; }}
-                      >
-                        &#9654;
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '0.6rem' }}>
-                      {songData.map((_, i) => (
-                        <div
-                          key={i}
-                          onClick={() => setCurrentSongIndex(i)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '0.8rem' }}>
+                        <img
+                          src={songData[currentSongIndex].image}
+                          alt=""
                           style={{
-                            width: i === currentSongIndex ? '18px' : '6px',
-                            height: '6px',
-                            borderRadius: '3px',
-                            background: i === currentSongIndex ? '#1db954' : 'rgba(255,255,255,0.25)',
-                            transition: 'all 0.3s ease',
-                            cursor: 'pointer',
+                            width: '250px',
+                            height: '250px',
+                            borderRadius: '6px',
+                            objectFit: 'cover',
+                            display: 'block',
                           }}
                         />
-                      ))}
+                        <div>
+                          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1rem', fontWeight: 600 }}>{songData[currentSongIndex].title}</div>
+                          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{songData[currentSongIndex].artist}</div>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '3px',
+                          background: 'rgba(255,255,255,0.15)',
+                          borderRadius: '2px',
+                          marginBottom: '0.8rem',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: songPlaying ? '45%' : '0%',
+                            height: '100%',
+                            background: '#1db954',
+                            borderRadius: '2px',
+                            transition: 'width 0.3s linear',
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); prevSong(); }}
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: '#666',
+                            border: 'none',
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#1db954'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#666'; e.currentTarget.style.transform = 'scale(1)'; }}
+                        >
+                          &#9664;
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); togglePasilyo(); }}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: '#1db954',
+                            border: 'none',
+                            color: '#fff',
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'transform 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                        >
+                          {songPlaying ? (
+                            <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
+                              <rect x="1" y="1" width="3.5" height="12" rx="0.5" />
+                              <rect x="7.5" y="1" width="3.5" height="12" rx="0.5" />
+                            </svg>
+                          ) : (
+                            <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
+                              <path d="M2 1 L11 7 L2 13 Z" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); nextSong(); }}
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: '#666',
+                            border: 'none',
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#1db954'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#666'; e.currentTarget.style.transform = 'scale(1)'; }}
+                        >
+                          &#9654;
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '0.6rem' }}>
+                        {songData.map((_, i) => (
+                          <div
+                            key={i}
+                            onClick={() => setCurrentSongIndex(i)}
+                            style={{
+                              width: i === currentSongIndex ? '18px' : '6px',
+                              height: '6px',
+                              borderRadius: '3px',
+                              background: i === currentSongIndex ? '#1db954' : 'rgba(255,255,255,0.25)',
+                              transition: 'all 0.3s ease',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
               </div>
 
@@ -1957,12 +2397,12 @@ export default function App() {
                   </div>
 
                   <div style={{ maxWidth: '520px', width: '100%', background: 'linear-gradient(160deg, #fdf6ed, #f5ede0)', borderRadius: '16px', padding: '2.5rem 2rem', boxShadow: '0 12px 48px rgba(0,0,0,0.4)', animation: boxShowFinal ? 'none' : 'fadeUp 0.6s ease' }}>
-<div style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.5rem, 3vw, 2rem)', color: '#3a2a24', marginBottom: '1rem', fontWeight: 600, textAlign: 'center' }}>
-                  {boxCards[boxCardIndex].title}
-                </div>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.35rem', color: '#5a4a44', lineHeight: 1.85, textAlign: 'center', fontStyle: 'italic' }}>
-                  {boxCards[boxCardIndex].text}
-                </div>
+                    <div style={{ fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: 'clamp(1.5rem, 3vw, 2rem)', color: '#3a2a24', marginBottom: '1rem', fontWeight: 600, textAlign: 'center' }}>
+                      {boxCards[boxCardIndex].title}
+                    </div>
+                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.35rem', color: '#5a4a44', lineHeight: 1.85, textAlign: 'center', fontStyle: 'italic' }}>
+                      {boxCards[boxCardIndex].text}
+                    </div>
                   </div>
 
                   {!boxShowFinal && (
@@ -1984,7 +2424,7 @@ export default function App() {
                           opacity: boxCardIndex > 0 ? 1 : 0.3, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all 0.2s ease',
                         }}
-                        onMouseEnter={(e) => { if (boxCardIndex > 0) { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = '#d4a87a'; }}}
+                        onMouseEnter={(e) => { if (boxCardIndex > 0) { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = '#d4a87a'; } }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
                       >
                         &#9664;
@@ -2152,7 +2592,139 @@ export default function App() {
         </div>
       )}
 
-      {amourRevealed && (
+      {/* Standalone Video Memories Page */}
+      {showVideoPage && (
+        <VideoMemoriesPage
+          onContinue={handleEnterAmourFromVideo}
+          onFadeToTheBone={() => fadeOutToTheBone(5000)}
+        />
+      )}
+
+      {/* New White Memories Page (after video finale turns white) */}
+      {showWhiteMemoriesPage && (
+        <WhiteMemoriesPage
+          onContinue={handleEnterAmourFromWhite}
+          onPlayFoundYou={handlePlayFoundYou}
+        />
+      )}
+
+      {/* 3D Heart in Love Orbit Page */}
+      {showHeart3DOrbitPage && (
+        <Heart3DOrbitPage
+          onContinue={handleContinueFromHeart3D}
+          onEnteringReflection={handleEnteringReflection}
+        />
+      )}
+
+      {/* Monthsary Scrapbook Page (following template) */}
+      {showMonthsaryScrapbookPage && (
+        <MonthsaryScrapbookPage
+          onContinue={handleContinueFromScrapbook}
+        />
+      )}
+
+      {/* Persistent falling leaves across Video, White Memories, 3D Heart, and Scrapbook scenes */}
+      {(showVideoPage || showWhiteMemoriesPage || showHeart3DOrbitPage || showMonthsaryScrapbookPage) && !showNetflixVault && !isVaultTransitioning && (
+        <PetalCanvas style={{ zIndex: 100025, pointerEvents: 'none' }} />
+      )}
+
+      {/* 5-Second Deep Black Cinematic Transition */}
+      {isVaultTransitioning && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100060,
+            background: '#000000',
+            animation: 'slowFadeToPitchBlack 2s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+            pointerEvents: 'all',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <style>{`
+            @keyframes slowFadeToPitchBlack {
+              0% { opacity: 0; }
+              100% { opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Netflix Streaming Vault Page */}
+      {showNetflixVault && (
+        <NetflixVaultPage onSelectChapter={handleSelectChapterFromVault} />
+      )}
+
+      {/* Maze Game directly when selected from Chapter 1 */}
+      {showMazeGame && (
+        <GameIntro
+          onComplete={() => {
+            setShowMazeGame(false);
+            setShowNetflixVault(true);
+          }}
+        />
+      )}
+
+      {/* Floating Return Button to Netflix Vault once unlocked (Positioned on the Left) */}
+      {vaultUnlocked && !showNetflixVault && !isVaultTransitioning && (
+        <button
+          onClick={() => {
+            setShowMazeGame(false);
+            setShowWhiteMemoriesPage(false);
+            setShowHeart3DOrbitPage(false);
+            setShowMonthsaryScrapbookPage(false);
+            setShowHeartPage(false);
+            setShowVideoPage(false);
+            stopFinaleMusic();
+            if (foundYouAudioRef.current) {
+              try { foundYouAudioRef.current.pause(); } catch (e) {}
+            }
+            if (toTheBoneAudioRef.current) {
+              try { toTheBoneAudioRef.current.pause(); } catch (e) {}
+            }
+            setShowNetflixVault(true);
+          }}
+          title="Return to The Memory Vault"
+          style={{
+            position: 'fixed',
+            bottom: '22px',
+            left: '22px',
+            zIndex: 100050,
+            background: 'rgba(18, 18, 18, 0.94)',
+            backdropFilter: 'blur(12px)',
+            border: '1.5px solid #E50914',
+            borderRadius: '30px',
+            padding: '9px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: '#ffffff',
+            cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(229, 9, 20, 0.35)',
+            transition: 'all 0.25s ease',
+            fontFamily: "'Montserrat', sans-serif",
+            fontWeight: 800,
+            fontSize: '0.8rem',
+            letterSpacing: '0.04em',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.background = '#E50914';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.background = 'rgba(18, 18, 18, 0.94)';
+          }}
+        >
+          <span style={{ fontSize: '0.9rem', color: '#E50914' }}>▶</span>
+          <span>OURFLIX VAULT</span>
+        </button>
+      )}
+
+      {amourRevealed && !showVideoPage && (
         <div style={{
           transition: 'opacity 0.6s ease',
           opacity: mainSliding ? 0 : 1,

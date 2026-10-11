@@ -468,4 +468,81 @@ body {
   animation: stickerWiggle 0.5s ease-in-out infinite;
 }
 
+/* Subtle, barely visible scrollbar for letter */
+.subtle-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 237, 224, 0.12) transparent;
+}
+
+.subtle-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.subtle-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.subtle-scroll::-webkit-scrollbar-thumb {
+  background: rgba(245, 237, 224, 0.14);
+  border-radius: 999px;
+  transition: background 0.3s ease;
+}
+
+.subtle-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 237, 224, 0.32);
+}
+
+@keyframes whiteMarqueeLeft {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes whiteMarqueeRight {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Optimized photo fly up with smooth GPU stretch and lightweight blur */
+@keyframes photoFlyUpWithMotionBlur {
+  0% {
+    transform: translateY(0) scaleY(1);
+    opacity: 0.95;
+  }
+  20% {
+    transform: translateY(-20px) scaleY(1.05);
+    opacity: 0.95;
+  }
+  50% {
+    transform: translateY(-160px) scaleY(1.3);
+    opacity: 0.88;
+  }
+  75% {
+    transform: translateY(-500px) scaleY(1.55);
+    opacity: 0.65;
+  }
+  100% {
+    transform: translateY(calc(-100vh - 380px)) scaleY(1.75);
+    opacity: 0;
+  }
+}
+
+/* Universal utility to hide scrollbars while allowing smooth scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 
