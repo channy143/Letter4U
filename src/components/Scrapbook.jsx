@@ -60,18 +60,18 @@ const SEED_GALLERY = {
     '/pictures/together/f4f9b37e-3bc7-45b2-82d5-4778bb1a20bd.jpg',
     '/pictures/together/f8961480-e970-43d5-a4b6-071c025f5940.jpg',
     '/pictures/together/f8ba29a8-a4d7-43be-b8fb-cc78bba94235.jpg',
-    // Row 14: Evening park playful kisses & expressions
-    '/pictures/together/019d3024-4de4-40a7-9dc4-b2961b290677.jpg',
-    '/pictures/together/6ade6e31-114d-4eec-b70e-7354373a942a.jpg',
-    '/pictures/together/dcde40c1-22a2-4962-95d5-8978f00d0be4.jpg',
-    // Row 15: Photobooth studio portraits
-    '/moments/booth.jpg',
-    '/moments/booth1.jpg',
-    '/pictures/fav/40c82bf2-428f-4b48-851e-08a986be77c1.jpg',
-    // Row 16: Mirror cafe date & outdoor moments
-    '/moments/16.jpg',
-    '/moments/17.jpg',
-    '/moments/together.jpg',
+    // Row 14: Warm cafe booth date (requested photos)
+    '/pictures/date/0c931abc-2974-4f43-a868-959ef33531ea.jpg',
+    '/pictures/date/7e5a9288-4b68-482f-b090-929b87bbce9f.jpg',
+    '/pictures/date/4345e340-bd62-400d-8225-634c3f2369c0.jpg',
+    // Row 15: Playful Mario cap night stroll
+    '/pictures/randomday/0b93dd29-a119-45c1-a167-c25adfe30b42.jpg',
+    '/pictures/randomday/2829462a-4150-4e36-bfa4-322d5d6ef170.jpg',
+    '/pictures/randomday/34c6dd79-4ab1-4741-ba93-e8948ddc513c.jpg',
+    // Row 16: Sunny resort palm tree portraits
+    '/pictures/her/32bd59a8-41a1-4db0-bb01-8803dddf5849.jpg',
+    '/pictures/her/3ce9eaf6-c5f3-4b67-8cc5-be4c7abc4818.jpg',
+    '/pictures/her/5d6988db-b47b-4fb7-a10d-173953bcea88.jpg',
   ],
 };
 

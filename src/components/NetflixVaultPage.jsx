@@ -128,6 +128,20 @@ const CARD_TILTS = [
   { start: '-6deg', mid: '2deg', settle: '-0.5deg' },
 ];
 
+// All project music tracks available for OurFlix selection
+const PROJECT_MUSIC_TRACKS = [
+  { id: 'musika', title: 'Musika', artist: 'Dionela', src: '/music/Musika.mp3' },
+  { id: 'palagi', title: 'Palagi', artist: 'TJ Monterde & KZ Tandingan', src: '/music/palagi.mp3' },
+  { id: 'pasilyo', title: 'Pasilyo', artist: 'SunKissed Lola', src: '/music/pasilyo.mp3' },
+  { id: 'tothebone', title: 'To The Bone', artist: 'Pamungkas', src: '/music/tothebone.mp3' },
+  { id: 'ikawatako', title: 'Ikaw at Ako', artist: 'TJ Monterde', src: '/music/ikawatako.mp3' },
+  { id: 'foundyou', title: 'Found You', artist: 'Stephen Sanchez', src: '/music/foundyou.mp3' },
+  { id: 'glue', title: 'Glue Song', artist: 'beabadoobee', src: '/music/glue.mp3' },
+  { id: 'her', title: 'Her', artist: 'Letter4U', src: '/music/her.mp3' },
+  { id: 'tibok', title: 'Tibok', artist: 'Letter4U', src: '/music/tibok.mp3' },
+  { id: 'song', title: 'Kalapastangan', artist: 'Instrumental', src: '/music/song.mp3' },
+];
+
 export default function NetflixVaultPage({ onSelectChapter }) {
   const [videoIndex, setVideoIndex] = useState(0);
   const [isVideoFading, setIsVideoFading] = useState(false);
@@ -136,6 +150,90 @@ export default function NetflixVaultPage({ onSelectChapter }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCard, setSelectedCard] = useState(null);
   const videoRef = useRef(null);
+
+  // Background Music state & refs for Choose Music dropdown
+  const [isMusicOpen, setIsMusicOpen] = useState(false);
+  const [currentMusic, setCurrentMusic] = useState(null);
+  const bgmRef = useRef(null);
+  const musicDropdownRef = useRef(null);
+
+  // Close music dropdown on outside click or escape
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (musicDropdownRef.current && !musicDropdownRef.current.contains(event.target)) {
+        setIsMusicOpen(false);
+      }
+    }
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setIsMusicOpen(false);
+    }
+    if (isMusicOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMusicOpen]);
+
+  // Clean up background music on component unmount
+  useEffect(() => {
+    return () => {
+      if (bgmRef.current) {
+        try {
+          bgmRef.current.pause();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
+  function handleSelectMusic(track) {
+    if (!track) {
+      // Mute / Off
+      setCurrentMusic(null);
+      setIsMuted(true);
+      if (bgmRef.current) {
+        try {
+          bgmRef.current.pause();
+          bgmRef.current.currentTime = 0;
+        } catch (e) {}
+      }
+    } else if (track.id === 'video') {
+      // Video audio
+      setCurrentMusic(track);
+      setIsMuted(false);
+      if (bgmRef.current) {
+        try {
+          bgmRef.current.pause();
+          bgmRef.current.currentTime = 0;
+        } catch (e) {}
+      }
+    } else {
+      // Play selected project music
+      setCurrentMusic(track);
+      setIsMuted(true);
+      if (bgmRef.current) {
+        try {
+          bgmRef.current.src = track.src;
+          bgmRef.current.volume = 0.75;
+          bgmRef.current.play().catch(() => {});
+        } catch (e) {}
+      }
+    }
+    setIsMusicOpen(false);
+  }
+
+  function handleChapterNavigation(chapterId) {
+    if (bgmRef.current) {
+      try {
+        bgmRef.current.pause();
+      } catch (e) {}
+    }
+    if (onSelectChapter) {
+      onSelectChapter(chapterId);
+    }
+  }
 
   // Play current video safely
   useEffect(() => {
@@ -316,6 +414,31 @@ export default function NetflixVaultPage({ onSelectChapter }) {
         }
         .tab-btn:hover {
           color: #ffffff !important;
+        }
+
+        @keyframes netflixDropdownFade {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .music-dropdown-menu::-webkit-scrollbar {
+          width: 6px;
+        }
+        .music-dropdown-menu::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.3);
+        }
+        .music-dropdown-menu::-webkit-scrollbar-thumb {
+          background: rgba(229, 9, 20, 0.55);
+          border-radius: 4px;
+        }
+        .music-dropdown-menu::-webkit-scrollbar-thumb:hover {
+          background: rgba(229, 9, 20, 0.85);
         }
       `}</style>
 
@@ -755,27 +878,230 @@ export default function NetflixVaultPage({ onSelectChapter }) {
               <span>❯</span>
             </button>
 
-            {/* Audio Mute/Unmute Toggle */}
-            <button
-              onClick={() => setIsMuted((m) => !m)}
-              title={isMuted ? 'Unmute Video Audio' : 'Mute Video Audio'}
-              style={{
-                background: 'rgba(0, 0, 0, 0.65)',
-                border: '1px solid rgba(255, 255, 255, 0.25)',
-                color: '#fff',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {isMuted ? '🔇' : '🔊'}
-            </button>
+            {/* Choose Music Dropdown Button */}
+            <div ref={musicDropdownRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setIsMusicOpen((prev) => !prev)}
+                className="netflix-btn"
+                title="Choose Background Music"
+                style={{
+                  background: currentMusic ? 'rgba(229, 9, 20, 0.28)' : 'rgba(255, 255, 255, 0.18)',
+                  backdropFilter: 'blur(10px)',
+                  color: '#ffffff',
+                  border: currentMusic ? '1px solid rgba(229, 9, 20, 0.8)' : '1px solid rgba(255, 255, 255, 0.35)',
+                  borderRadius: '6px',
+                  padding: '0.75rem 1.45rem',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.55rem',
+                  boxShadow: currentMusic ? '0 0 16px rgba(229, 9, 20, 0.4)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span>{currentMusic ? '🎶' : '🎵'}</span>
+                <span>{currentMusic ? (currentMusic.id === 'video' ? 'Video Audio' : currentMusic.title) : 'Choose Music'}</span>
+                <span
+                  style={{
+                    fontSize: '0.68rem',
+                    transform: isMusicOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease',
+                    opacity: 0.85,
+                  }}
+                >
+                  ▼
+                </span>
+              </button>
+
+              {/* Music Dropdown Menu */}
+              {isMusicOpen && (
+                <div
+                  className="music-dropdown-menu"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    left: 0,
+                    zIndex: 1000,
+                    minWidth: '290px',
+                    maxHeight: '340px',
+                    overflowY: 'auto',
+                    background: 'rgba(18, 18, 18, 0.96)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    borderRadius: '8px',
+                    boxShadow: '0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(229, 9, 20, 0.2)',
+                    padding: '0.4rem',
+                    animation: 'netflixDropdownFade 0.18s ease-out',
+                  }}
+                >
+                  {/* Status header */}
+                  <div
+                    style={{
+                      padding: '0.45rem 0.75rem 0.35rem',
+                      fontSize: '0.68rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: '#a3a3a3',
+                      fontWeight: 700,
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                      marginBottom: '0.35rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>OurFlix Music</span>
+                    <span style={{ color: currentMusic ? '#E50914' : '#666', fontWeight: 600 }}>
+                      {currentMusic ? 'Playing' : 'Muted'}
+                    </span>
+                  </div>
+
+                  {/* Option: Mute (No Music) */}
+                  <div
+                    onClick={() => handleSelectMusic(null)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.65rem',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      background: !currentMusic ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                      transition: 'background 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (currentMusic) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (currentMusic) e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <span style={{ fontSize: '1rem' }}>🔇</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Mute / No Music</div>
+                      <div style={{ color: '#888888', fontSize: '0.72rem' }}>Silent playback</div>
+                    </div>
+                    {!currentMusic && <span style={{ color: '#E50914', fontSize: '0.85rem' }}>✓</span>}
+                  </div>
+
+                  {/* Option: Video Audio */}
+                  <div
+                    onClick={() => handleSelectMusic({ id: 'video', title: 'Video Audio' })}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.65rem',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      background: currentMusic?.id === 'video' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                      transition: 'background 0.15s ease',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                      marginBottom: '0.35rem',
+                      paddingBottom: '0.55rem',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (currentMusic?.id !== 'video') e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (currentMusic?.id !== 'video') e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <span style={{ fontSize: '1rem' }}>🔊</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: '#ffffff', fontSize: '0.84rem', fontWeight: 600 }}>Video Audio</div>
+                      <div style={{ color: '#888888', fontSize: '0.72rem' }}>Original clip sound</div>
+                    </div>
+                    {currentMusic?.id === 'video' && <span style={{ color: '#E50914', fontSize: '0.85rem' }}>✓</span>}
+                  </div>
+
+                  {/* Section Label: All Project Songs */}
+                  <div
+                    style={{
+                      padding: '0.2rem 0.75rem 0.35rem',
+                      fontSize: '0.66rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: '#777',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Project Music ({PROJECT_MUSIC_TRACKS.length})
+                  </div>
+
+                  {PROJECT_MUSIC_TRACKS.map((track) => {
+                    const isSelected = currentMusic?.id === track.id;
+                    return (
+                      <div
+                        key={track.id}
+                        onClick={() => handleSelectMusic(track)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.65rem',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '5px',
+                          cursor: 'pointer',
+                          background: isSelected ? 'rgba(229, 9, 20, 0.22)' : 'transparent',
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <span style={{ fontSize: '0.95rem', color: isSelected ? '#E50914' : '#fff' }}>
+                          {isSelected ? '▶' : '🎵'}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              color: isSelected ? '#ffffff' : '#f0f0f0',
+                              fontSize: '0.84rem',
+                              fontWeight: isSelected ? 700 : 500,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {track.title}
+                          </div>
+                          <div
+                            style={{
+                              color: isSelected ? '#ff8a80' : '#888888',
+                              fontSize: '0.72rem',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {track.artist}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <span
+                            style={{
+                              color: '#E50914',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.05em',
+                            }}
+                          >
+                            PLAYING
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -889,7 +1215,7 @@ export default function NetflixVaultPage({ onSelectChapter }) {
                 <div
                   onClick={() => {
                     if (onSelectChapter) {
-                      onSelectChapter(card.id);
+                      handleChapterNavigation(card.id);
                     } else {
                       setSelectedCard(card);
                     }
@@ -1138,7 +1464,7 @@ export default function NetflixVaultPage({ onSelectChapter }) {
               <button
                 onClick={() => {
                   setSelectedCard(null);
-                  if (onSelectChapter) onSelectChapter(selectedCard.id);
+                  handleChapterNavigation(selectedCard.id);
                 }}
                 style={{
                   width: '100%',
@@ -1161,6 +1487,8 @@ export default function NetflixVaultPage({ onSelectChapter }) {
           </div>
         </div>
       )}
+      {/* Background Project Music Player */}
+      <audio ref={bgmRef} loop />
     </div>
   );
 }
