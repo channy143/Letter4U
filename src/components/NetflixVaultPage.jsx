@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 // Cinematic couple videos from the repository (strictly our memories, no music videos)
 const VAULT_VIDEOS = [
@@ -154,13 +155,46 @@ export default function NetflixVaultPage({ onSelectChapter }) {
   // Background Music state & refs for Choose Music dropdown
   const [isMusicOpen, setIsMusicOpen] = useState(false);
   const [currentMusic, setCurrentMusic] = useState(null);
+  const [dropdownCoords, setDropdownCoords] = useState(null);
   const bgmRef = useRef(null);
   const musicDropdownRef = useRef(null);
+
+  // Position and update dropdown coordinates dynamically
+  useEffect(() => {
+    if (!isMusicOpen) return;
+
+    function updateCoords() {
+      if (musicDropdownRef.current) {
+        const rect = musicDropdownRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const openUpward = spaceBelow < 360 && rect.top > 360;
+
+        setDropdownCoords({
+          top: openUpward ? null : rect.bottom + 8,
+          bottom: openUpward ? window.innerHeight - rect.top + 8 : null,
+          right: Math.max(16, window.innerWidth - rect.right),
+          width: Math.min(310, window.innerWidth - 32),
+        });
+      }
+    }
+
+    updateCoords();
+    window.addEventListener('resize', updateCoords);
+    window.addEventListener('scroll', updateCoords, true);
+    return () => {
+      window.removeEventListener('resize', updateCoords);
+      window.removeEventListener('scroll', updateCoords, true);
+    };
+  }, [isMusicOpen]);
 
   // Close music dropdown on outside click or escape
   useEffect(() => {
     function handleClickOutside(event) {
-      if (musicDropdownRef.current && !musicDropdownRef.current.contains(event.target)) {
+      if (
+        musicDropdownRef.current &&
+        !musicDropdownRef.current.contains(event.target) &&
+        !event.target.closest?.('.music-dropdown-portal')
+      ) {
         setIsMusicOpen(false);
       }
     }
@@ -638,7 +672,7 @@ export default function NetflixVaultPage({ onSelectChapter }) {
           position: 'relative',
           width: '100%',
           height: 'clamp(480px, 66vh, 620px)',
-          overflow: 'hidden',
+          overflow: 'visible',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end', // Aligns title on the right as requested
@@ -917,25 +951,28 @@ export default function NetflixVaultPage({ onSelectChapter }) {
                 </span>
               </button>
 
-              {/* Music Dropdown Menu */}
-              {isMusicOpen && (
+              {/* Music Dropdown Menu via Portal to be in front of everything */}
+              {isMusicOpen && dropdownCoords && createPortal(
                 <div
-                  className="music-dropdown-menu"
+                  className="music-dropdown-portal music-dropdown-menu"
                   style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    left: 0,
-                    zIndex: 1000,
-                    minWidth: '290px',
-                    maxHeight: '340px',
+                    position: 'fixed',
+                    top: dropdownCoords.top !== null ? `${dropdownCoords.top}px` : 'auto',
+                    bottom: dropdownCoords.bottom !== null ? `${dropdownCoords.bottom}px` : 'auto',
+                    right: `${dropdownCoords.right}px`,
+                    width: `${dropdownCoords.width}px`,
+                    maxHeight: '360px',
                     overflowY: 'auto',
-                    background: 'rgba(18, 18, 18, 0.96)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
-                    borderRadius: '8px',
-                    boxShadow: '0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(229, 9, 20, 0.2)',
-                    padding: '0.4rem',
+                    zIndex: 99999999, // In front of and above everything
+                    background: 'rgba(18, 18, 18, 0.97)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.22)',
+                    borderRadius: '10px',
+                    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(229, 9, 20, 0.35)',
+                    padding: '0.45rem',
                     animation: 'netflixDropdownFade 0.18s ease-out',
+                    pointerEvents: 'auto',
                   }}
                 >
                   {/* Status header */}
@@ -1099,7 +1136,8 @@ export default function NetflixVaultPage({ onSelectChapter }) {
                       </div>
                     );
                   })}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
           </div>
