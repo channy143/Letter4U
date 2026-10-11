@@ -152,9 +152,13 @@ export default function NetflixVaultPage({ onSelectChapter }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const videoRef = useRef(null);
 
-  // Background Music state & refs for Choose Music dropdown
+  // Background Music state & refs for Choose Music dropdown (random music on mount)
+  const [currentMusic, setCurrentMusic] = useState(() => {
+    if (!PROJECT_MUSIC_TRACKS || PROJECT_MUSIC_TRACKS.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * PROJECT_MUSIC_TRACKS.length);
+    return PROJECT_MUSIC_TRACKS[randomIndex];
+  });
   const [isMusicOpen, setIsMusicOpen] = useState(false);
-  const [currentMusic, setCurrentMusic] = useState(null);
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const bgmRef = useRef(null);
   const musicDropdownRef = useRef(null);
@@ -211,12 +215,41 @@ export default function NetflixVaultPage({ onSelectChapter }) {
     };
   }, [isMusicOpen]);
 
-  // Clean up background music on component unmount
+  // Autoplay random background music on initial load / refresh
   useEffect(() => {
+    const audio = bgmRef.current;
+    if (!audio || !currentMusic) return;
+
+    audio.src = currentMusic.src;
+    audio.volume = 0.75;
+    audio.loop = true;
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Autoplay policy prevented playback before user gesture.
+        // Resume seamlessly on the first user interaction anywhere on the page
+        const startOnFirstInteraction = () => {
+          if (audio.paused && currentMusic) {
+            audio.play().catch(() => {});
+          }
+          window.removeEventListener('click', startOnFirstInteraction);
+          window.removeEventListener('pointerdown', startOnFirstInteraction);
+          window.removeEventListener('touchstart', startOnFirstInteraction);
+          window.removeEventListener('keydown', startOnFirstInteraction);
+        };
+
+        window.addEventListener('click', startOnFirstInteraction, { once: true });
+        window.addEventListener('pointerdown', startOnFirstInteraction, { once: true });
+        window.addEventListener('touchstart', startOnFirstInteraction, { once: true });
+        window.addEventListener('keydown', startOnFirstInteraction, { once: true });
+      });
+    }
+
     return () => {
-      if (bgmRef.current) {
+      if (audio) {
         try {
-          bgmRef.current.pause();
+          audio.pause();
         } catch (e) {}
       }
     };
