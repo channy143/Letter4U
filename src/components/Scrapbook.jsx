@@ -6,7 +6,14 @@ import { startFinaleMusic } from '../utils/music';
 const fullUrl = (p) => p;
 
 const SEED_GALLERY = {
-  food: ['/scrapbook/1.jpg', '/scrapbook/2.jpg'],
+  food: [
+    '/scrapbook/1.jpg',
+    '/scrapbook/2.jpg',
+    '/scrapbook/4.jpg',
+    '/photostrip/g3.jpg',
+    '/pictures/date/a4f5bd08-84f0-46ad-8eda-dc8edf919b75.jpg',
+    '/pictures/date/ada91b64-54e2-4b31-a846-14f0a37795e9.jpg',
+  ],
   favorites: [
     '/scrapbook/3.jpg',
     '/photostrip/g1.jpg',
@@ -23,6 +30,15 @@ const SEED_GALLERY = {
     '/moments/her.png',
     '/moments/her1.png',
     '/moments/her3.png',
+    '/pictures/fav/00e5842e-86c2-4091-a4f6-57a104f66cc3.jpg',
+    '/pictures/fav/4ebe17c3-4828-4335-932c-6330f4329afe.jpg',
+    '/pictures/fav/fa501300-9c29-4321-be7d-fb445f288c11.jpg',
+    '/pictures/fav/1bfbce7f-00d0-4b6a-9355-4b6562f4532e.jpg',
+    '/pictures/fav/25b714e2-6c5c-4dd8-8c13-fe320b7f221f.jpg',
+    '/pictures/fav/5a349e23-c636-40e3-8073-7a14a1beb111.jpg',
+    '/pictures/fav/0358b1bd-d14f-4de8-82f4-99a8ebf1af75.jpg',
+    '/pictures/fav/73d3135c-3c36-47b9-957a-37dac432b8b9.jpg',
+    '/pictures/fav/3aa10a1b-a6eb-4faa-b0a5-807aa3dc5da9.jpg',
   ],
 };
 
