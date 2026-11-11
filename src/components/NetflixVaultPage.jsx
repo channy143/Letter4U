@@ -108,6 +108,16 @@ const CHAPTER_CARDS = [
     image: '/icon/5.jpeg',
     description: 'A cozy handwritten binder letter celebrating our 1st monthsary — complete with photo memories, cute stickers, and loving reminders.',
   },
+  {
+    id: 'puzzle',
+    title: 'Puzzle Game',
+    episode: 'CHAPTER 6',
+    category: 'Puzzle Game',
+    duration: 'Photo Puzzle',
+    image: '/pictures/image.png',
+    description: 'Piece together our favorite photo memories in an interactive photo puzzle — match the pieces, solve each round, and unlock sweet surprises!',
+    badge: 'GAME',
+  },
 ];
 
 // Genre / Filter categories for middle bar
@@ -118,6 +128,7 @@ const CATEGORIES = [
   'Musika',
   'A Quite Glimpse of Us',
   'Monthsary Scrapbook',
+  'Puzzle Game',
 ];
 
 // Canva Scrapbook tilt angles for organic paper drop
@@ -127,6 +138,7 @@ const CARD_TILTS = [
   { start: '-5.5deg', mid: '1.8deg', settle: '-0.4deg' },
   { start: '7deg', mid: '-2.2deg', settle: '0.7deg' },
   { start: '-6deg', mid: '2deg', settle: '-0.5deg' },
+  { start: '5deg', mid: '-1.5deg', settle: '0.4deg' },
 ];
 
 // All project music tracks available for OurFlix selection
@@ -612,6 +624,16 @@ export default function NetflixVaultPage({ onSelectChapter }) {
               }}
             >
               A Quite Glimpse of Us
+            </span>
+            <span
+              className="nav-link"
+              onClick={() => setActiveCategory('Puzzle Game')}
+              style={{
+                color: activeCategory === 'Puzzle Game' ? '#fff' : '#b3b3b3',
+                fontWeight: activeCategory === 'Puzzle Game' ? 700 : 500,
+              }}
+            >
+              Puzzle Game
             </span>
             <span
               className="nav-link"

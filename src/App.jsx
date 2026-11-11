@@ -18,6 +18,7 @@ import VideoMemoriesPage from './components/VideoMemoriesPage';
 import WhiteMemoriesPage from './components/WhiteMemoriesPage';
 import Heart3DOrbitPage from './components/Heart3DOrbitPage';
 import MonthsaryScrapbookPage from './components/MonthsaryScrapbookPage';
+import PuzzleGamePage from './components/PuzzleGamePage';
 import NetflixVaultPage from './components/NetflixVaultPage';
 
 export default function App() {
@@ -91,11 +92,13 @@ export default function App() {
   const toTheBoneAudioRef = useRef(null);
   const toTheBoneFadeRafRef = useRef(null);
   const foundYouAudioRef = useRef(null);
+  const legoHouseAudioRef = useRef(null);
   const [showVideoPage, setShowVideoPage] = useState(false);
   const [showWhiteMemoriesPage, setShowWhiteMemoriesPage] = useState(false);
   const [showHeart3DOrbitPage, setShowHeart3DOrbitPage] = useState(false);
   const [showMonthsaryScrapbookPage, setShowMonthsaryScrapbookPage] = useState(false);
   const [showMazeGame, setShowMazeGame] = useState(false);
+  const [showPuzzleGame, setShowPuzzleGame] = useState(false);
   const [showNetflixVault, setShowNetflixVault] = useState(isOurflixDefault);
   const [isVaultTransitioning, setIsVaultTransitioning] = useState(false);
   const [vaultUnlocked, setVaultUnlocked] = useState(isOurflixDefault);
@@ -683,6 +686,7 @@ export default function App() {
 
   function handleSelectChapterFromVault(chapterId) {
     setShowNetflixVault(false);
+    setVaultUnlocked(true);
     stopFinaleMusic();
     if (foundYouAudioRef.current) {
       try {
@@ -694,6 +698,12 @@ export default function App() {
         toTheBoneAudioRef.current.pause();
       } catch (e) {}
     }
+    if (legoHouseAudioRef.current) {
+      try {
+        legoHouseAudioRef.current.pause();
+        legoHouseAudioRef.current.currentTime = 0;
+      } catch (e) {}
+    }
 
     if (chapterId === 'game') {
       setShowWhiteMemoriesPage(false);
@@ -701,9 +711,11 @@ export default function App() {
       setShowVideoPage(false);
       setShowHeartPage(false);
       setShowMonthsaryScrapbookPage(false);
+      setShowPuzzleGame(false);
       setShowMazeGame(true);
     } else if (chapterId === 'amour') {
       setShowMazeGame(false);
+      setShowPuzzleGame(false);
       setShowWhiteMemoriesPage(false);
       setShowHeart3DOrbitPage(false);
       setShowVideoPage(false);
@@ -714,6 +726,7 @@ export default function App() {
       setAmourRevealed(true);
     } else if (chapterId === 'glimpse') {
       setShowMazeGame(false);
+      setShowPuzzleGame(false);
       setShowMonthsaryScrapbookPage(false);
       setShowHeart3DOrbitPage(false);
       setShowWhiteMemoriesPage(false);
@@ -728,6 +741,7 @@ export default function App() {
       }
     } else if (chapterId === 'musika') {
       setShowMazeGame(false);
+      setShowPuzzleGame(false);
       setShowMonthsaryScrapbookPage(false);
       setShowWhiteMemoriesPage(false);
       setShowHeart3DOrbitPage(false);
@@ -735,6 +749,7 @@ export default function App() {
       handleHeartPageOpen();
     } else if (chapterId === 'scrapbook') {
       setShowMazeGame(false);
+      setShowPuzzleGame(false);
       setShowHeartPage(false);
       setShowWhiteMemoriesPage(false);
       setShowHeart3DOrbitPage(false);
@@ -747,8 +762,34 @@ export default function App() {
           foundYouAudioRef.current.play().catch(() => {});
         } catch (e) {}
       }
+    } else if (chapterId === 'puzzle') {
+      setShowMazeGame(false);
+      setShowHeartPage(false);
+      setShowWhiteMemoriesPage(false);
+      setShowHeart3DOrbitPage(false);
+      setShowVideoPage(false);
+      setShowMonthsaryScrapbookPage(false);
+      setShowPuzzleGame(true);
+      if (legoHouseAudioRef.current) {
+        try {
+          legoHouseAudioRef.current.muted = false;
+          legoHouseAudioRef.current.currentTime = 0;
+          legoHouseAudioRef.current.volume = 0.75;
+          legoHouseAudioRef.current.play().catch(() => {});
+        } catch (e) {}
+      }
     }
   }
+
+  // Stop Lego House music whenever Puzzle Game closes
+  useEffect(() => {
+    if (!showPuzzleGame && legoHouseAudioRef.current) {
+      try {
+        legoHouseAudioRef.current.pause();
+        legoHouseAudioRef.current.currentTime = 0;
+      } catch (e) {}
+    }
+  }, [showPuzzleGame]);
 
   return (
     <>
@@ -1034,6 +1075,15 @@ export default function App() {
       <audio
         ref={foundYouAudioRef}
         src="/music/foundyou.mp3"
+        preload="auto"
+        loop
+        style={{ display: 'none' }}
+      />
+
+      {/* Audio element for Lego House (Chapter 6 Puzzle Game) */}
+      <audio
+        ref={legoHouseAudioRef}
+        src="/music/legohouse.mp3"
         preload="auto"
         loop
         style={{ display: 'none' }}
@@ -2682,11 +2732,40 @@ export default function App() {
         />
       )}
 
+      {/* Puzzle Game directly when selected from Chapter 6 */}
+      {showPuzzleGame && (
+        <PuzzleGamePage
+          musicRef={legoHouseAudioRef}
+          onComplete={() => {
+            setShowPuzzleGame(false);
+            if (legoHouseAudioRef.current) {
+              try {
+                legoHouseAudioRef.current.pause();
+                legoHouseAudioRef.current.currentTime = 0;
+              } catch (e) {}
+            }
+            setShowNetflixVault(true);
+          }}
+          onBackToVault={() => {
+            setShowPuzzleGame(false);
+            if (legoHouseAudioRef.current) {
+              try {
+                legoHouseAudioRef.current.pause();
+                legoHouseAudioRef.current.currentTime = 0;
+              } catch (e) {}
+            }
+            setShowNetflixVault(true);
+          }}
+        />
+      )}
+
       {/* Floating Return Button to Netflix Vault once unlocked (Positioned on the Left) */}
       {vaultUnlocked && !showNetflixVault && !isVaultTransitioning && (
         <button
+          id="ourflix-vault-return-btn"
           onClick={() => {
             setShowMazeGame(false);
+            setShowPuzzleGame(false);
             setShowWhiteMemoriesPage(false);
             setShowHeart3DOrbitPage(false);
             setShowMonthsaryScrapbookPage(false);
@@ -2698,6 +2777,12 @@ export default function App() {
             }
             if (toTheBoneAudioRef.current) {
               try { toTheBoneAudioRef.current.pause(); } catch (e) {}
+            }
+            if (legoHouseAudioRef.current) {
+              try {
+                legoHouseAudioRef.current.pause();
+                legoHouseAudioRef.current.currentTime = 0;
+              } catch (e) {}
             }
             setShowNetflixVault(true);
           }}
